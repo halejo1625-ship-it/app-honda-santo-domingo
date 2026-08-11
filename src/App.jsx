@@ -639,7 +639,7 @@ function AsesorView({ onExit }) {
   return (
     <div className="min-h-screen" style={{ background: "#14161A" }}>
       <TopBar title={`Asesor · ${name}`} onExit={handleLogout} />
-      <div className="max-w-lg mx-auto px-4 sm:px-6 py-6 flex flex-col gap-6">
+      <div className="max-w-lg lg:max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-6">
         {!storageOk && (
           <div className="rounded-lg px-4 py-3 text-xs" style={{ background: "#3A1F1F", border: "1px solid #E4002B", color: "#FFD3D3" }}>
             No se detecta guardado en este momento. Cierra y vuelve a abrir la app; si sigue igual, avísale a Alejandro.
@@ -1131,7 +1131,7 @@ function CajeraView({ onExit }) {
   return (
     <div className="min-h-screen" style={{ background: "#14161A" }}>
       <TopBar title={`Caja · ${name}`} onExit={handleLogout} />
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 flex flex-col gap-5">
+      <div className="max-w-3xl lg:max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-5">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <Field label="Fecha">
             <input
@@ -1982,7 +1982,7 @@ function AdminView({ onExit }) {
   return (
     <div className="min-h-screen" style={{ background: "#14161A" }}>
       <TopBar title="Panel administrador" onExit={onExit} />
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 flex flex-col gap-7">
+      <div className="max-w-3xl lg:max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-7">
         <div className="rounded-lg p-4 sm:p-5" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
           <div className="font-semibold uppercase text-xs tracking-[0.14em] mb-3" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
             Periodo del reporte
