@@ -913,6 +913,7 @@ function RecordatoriosPanel({ mode, personName, recordatorios, setRecordatorios 
 function CRMPanel({ personName, crm, setCrm }) {
   const [nombre, setNombre] = useState("");
   const [telefono, setTelefono] = useState("");
+  const [identificacion, setIdentificacion] = useState("");
   const [modeloInteres, setModeloInteres] = useState("");
   const [metodoPago, setMetodoPago] = useState(FORMAS_PAGO[0]);
   const [temperatura, setTemperatura] = useState("MEDIA");
@@ -959,6 +960,7 @@ function CRMPanel({ personName, crm, setCrm }) {
       asesor: personName,
       nombre: nombre.trim(),
       telefono: telefono.trim(),
+      identificacion: identificacion.trim(),
       modeloInteres: modeloInteres.trim(),
       metodoPago,
       temperatura,
@@ -973,6 +975,7 @@ function CRMPanel({ personName, crm, setCrm }) {
       setCrm(updated);
       setNombre("");
       setTelefono("");
+      setIdentificacion("");
       setModeloInteres("");
       setMetodoPago(FORMAS_PAGO[0]);
       setTemperatura("MEDIA");
@@ -1024,6 +1027,9 @@ function CRMPanel({ personName, crm, setCrm }) {
           </Field>
           <Field label="Teléfono">
             <input value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="09XXXXXXXX" type="tel" className="rounded-md px-3 py-2.5 outline-none" style={inputStyle} />
+          </Field>
+          <Field label="Identificación (cédula/RUC)">
+            <input value={identificacion} onChange={(e) => setIdentificacion(e.target.value)} placeholder="0912345678001" className="rounded-md px-3 py-2.5 outline-none" style={inputStyle} />
           </Field>
           <Field label="Modelo de interés">
             <input value={modeloInteres} onChange={(e) => setModeloInteres(e.target.value)} placeholder="Ej. Honda CB 190R" className="rounded-md px-3 py-2.5 outline-none" style={inputStyle} />
@@ -1127,7 +1133,7 @@ function CRMPanel({ personName, crm, setCrm }) {
                       </span>
                     </div>
                     <div className="text-[11px] mt-0.5" style={{ color: "#8A8F98" }}>
-                      {p.telefono} · {p.modeloInteres || "Sin modelo"} · {p.metodoPago}
+                      {p.telefono}{p.identificacion ? ` · ${p.identificacion}` : ""} · {p.modeloInteres || "Sin modelo"} · {p.metodoPago}
                     </div>
                     {p.proximaGestion && (
                       <div className="text-[11px] mt-0.5 font-medium" style={{ color: vencida ? "#FF8A8A" : "#8A8F98" }}>
@@ -1321,6 +1327,7 @@ function AsesorView({ onExit }) {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       asesor: name.trim(),
       cliente: "",
+      identificacion: "",
       modelo: "",
       formaPago: FORMAS_PAGO[0],
       estado: "",
@@ -1860,6 +1867,7 @@ function AsesorView({ onExit }) {
               <thead>
                 <tr style={{ background: "#1E2126", color: "#8A8F98" }}>
                   <th className="text-left font-medium uppercase tracking-wide px-2 py-2.5">Cliente</th>
+                  <th className="text-left font-medium uppercase tracking-wide px-2 py-2.5">Identificación</th>
                   <th className="text-left font-medium uppercase tracking-wide px-2 py-2.5">Modelo</th>
                   <th className="text-left font-medium uppercase tracking-wide px-2 py-2.5">Forma de pago</th>
                   <th className="text-left font-medium uppercase tracking-wide px-2 py-2.5">Estado</th>
@@ -1876,6 +1884,16 @@ function AsesorView({ onExit }) {
                         onChange={(e) => updateProyeccion(p.id, "cliente", e.target.value)}
                         onBlur={commitProyeccion}
                         placeholder="Nombre completo"
+                        className="rounded px-1.5 py-1.5 outline-none text-xs"
+                        style={{ background: "transparent", border: "none", color: "#F2F1EC", width: "100%" }}
+                      />
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <input
+                        value={p.identificacion || ""}
+                        onChange={(e) => updateProyeccion(p.id, "identificacion", e.target.value)}
+                        onBlur={commitProyeccion}
+                        placeholder="Cédula/RUC"
                         className="rounded px-1.5 py-1.5 outline-none text-xs"
                         style={{ background: "transparent", border: "none", color: "#F2F1EC", width: "100%" }}
                       />
@@ -3265,6 +3283,7 @@ function AdminView({ onExit }) {
     const rows = proyecciones.map((p) => ({
       Asesor: p.asesor,
       Cliente: p.cliente,
+      Identificacion: p.identificacion || "",
       Modelo: p.modelo,
       "Forma de pago": p.formaPago,
       Estado: p.estado,
@@ -3272,7 +3291,7 @@ function AdminView({ onExit }) {
       Fecha: p.fecha,
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
-    ws["!cols"] = [{ wch: 14 }, { wch: 24 }, { wch: 20 }, { wch: 16 }, { wch: 28 }, { wch: 12 }, { wch: 12 }];
+    ws["!cols"] = [{ wch: 14 }, { wch: 24 }, { wch: 16 }, { wch: 20 }, { wch: 16 }, { wch: 28 }, { wch: 12 }, { wch: 12 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Proyecciones");
     XLSX.writeFile(wb, `proyecciones-indumot-${todayISO()}.xlsx`);
@@ -4160,7 +4179,7 @@ function AdminView({ onExit }) {
               <table className="w-full text-xs" style={{ minWidth: 680 }}>
                 <thead>
                   <tr style={{ background: "#1E2126", color: "#8A8F98" }}>
-                    {["Asesor", "Cliente", "Modelo", "Forma de pago", "Estado", "Valor"].map((h) => (
+                    {["Asesor", "Cliente", "Identificación", "Modelo", "Forma de pago", "Estado", "Valor"].map((h) => (
                       <th key={h} className="text-left font-medium uppercase tracking-wide px-3 py-2.5">{h}</th>
                     ))}
                   </tr>
@@ -4172,6 +4191,7 @@ function AdminView({ onExit }) {
                       <tr key={p.id} style={{ background: i % 2 ? "#1a1d22" : "#1E2126", color: "#F2F1EC" }}>
                         <td className="px-3 py-2.5 whitespace-nowrap">{p.asesor}</td>
                         <td className="px-3 py-2.5 whitespace-nowrap">{p.cliente || "—"}</td>
+                        <td className="px-3 py-2.5 whitespace-nowrap">{p.identificacion || "—"}</td>
                         <td className="px-3 py-2.5 whitespace-nowrap">{p.modelo || "—"}</td>
                         <td className="px-3 py-2.5 whitespace-nowrap">{p.formaPago}</td>
                         <td className="px-3 py-2.5">{p.estado || "—"}</td>
@@ -4338,7 +4358,7 @@ function AdminView({ onExit }) {
                           </span>
                         </div>
                         <div className="text-[11px] mt-0.5" style={{ color: "#8A8F98" }}>
-                          {p.telefono} · {p.modeloInteres || "Sin modelo"} · {p.metodoPago}
+                          {p.telefono}{p.identificacion ? ` · ${p.identificacion}` : ""} · {p.modeloInteres || "Sin modelo"} · {p.metodoPago}
                         </div>
                         {p.proximaGestion && (
                           <div className="text-[11px] mt-0.5 font-medium" style={{ color: vencida ? "#FF8A8A" : "#8A8F98" }}>
