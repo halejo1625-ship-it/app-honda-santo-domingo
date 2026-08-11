@@ -27,6 +27,9 @@ const CAJERAS = [
   { nombre: "Valeria", usuario: "valeria", clave: "ValCaja26" },
   { nombre: "Fernanda", usuario: "fernanda-caja", clave: "FerCaja26" },
 ];
+const DESTINATARIOS_RECORDATORIO = Array.from(
+  new Set([...ASESORES.map((a) => a.nombre), ...CAJERAS.map((c) => c.nombre)])
+);
 const COMPROBANTE_TIPOS = ["TALLER", "COBRO", "POST", "OTRO"];
 const TIPO_VENTA = ["MOTOCICLETA", "PRODUCTO DE FUERZA"];
 const isMoto = (s) => (s.tipo || "MOTOCICLETA") === "MOTOCICLETA";
@@ -643,7 +646,7 @@ const msSinceIso = (iso) => Date.now() - new Date(iso).getTime();
 
 function RecordatoriosPanel({ mode, personName, recordatorios, setRecordatorios }) {
   const [texto, setTexto] = useState("");
-  const [destinatario, setDestinatario] = useState(ASESORES[0].nombre);
+  const [destinatario, setDestinatario] = useState(DESTINATARIOS_RECORDATORIO[0]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -849,8 +852,8 @@ function RecordatoriosPanel({ mode, personName, recordatorios, setRecordatorios 
       <div className="rounded-lg p-4 sm:p-5 mb-4" style={{ background: "#1E2126", border: "1px solid #E4002B" }}>
         <Field label="Para">
           <select value={destinatario} onChange={(e) => setDestinatario(e.target.value)} className="rounded-md px-3 py-2.5 outline-none mb-3" style={inputStyle}>
-            {ASESORES.map((a) => (
-              <option key={a.nombre} value={a.nombre}>{a.nombre}</option>
+            {DESTINATARIOS_RECORDATORIO.map((nombre) => (
+              <option key={nombre} value={nombre}>{nombre}</option>
             ))}
           </select>
         </Field>
@@ -1677,14 +1680,17 @@ function CajeraView({ onExit }) {
   const [egresoError, setEgresoError] = useState("");
   const [cobrar, setCobrar] = useState("");
   const [recibido, setRecibido] = useState("");
+  const [cajeraTab, setCajeraTab] = useState("registro");
+  const [recordatorios, setRecordatorios] = useState([]);
 
   useEffect(() => {
     (async () => {
-      const [savedName, all, allTransfers, allEgresos] = await Promise.all([
+      const [savedName, all, allTransfers, allEgresos, allRecordatorios] = await Promise.all([
         loadMyCajeraName(),
         loadCajaEntries(),
         loadTransferencias(),
         loadEgresos(),
+        loadRecordatorios(),
       ]);
       if (savedName && CAJERAS.some((c) => c.nombre === savedName)) {
         setName(savedName);
@@ -1693,6 +1699,7 @@ function CajeraView({ onExit }) {
       setEntries(all);
       setTransferencias(allTransfers);
       setEgresos(allEgresos);
+      setRecordatorios(allRecordatorios);
       setLoading(false);
     })();
   }, []);
@@ -1974,6 +1981,43 @@ function CajeraView({ onExit }) {
       <TopBar title={`Caja · ${name}`} onExit={handleLogout} />
       <ChatWidget senderName={name} senderRole="Caja" />
       <div className="max-w-3xl lg:max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-5">
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setCajeraTab("registro")}
+            className="flex-1 min-w-[130px] rounded-lg py-3 font-semibold uppercase text-xs tracking-[0.1em] transition-colors"
+            style={{
+              fontFamily: "'Oswald',sans-serif",
+              background: cajeraTab === "registro" ? "#E4002B" : "#1E2126",
+              color: cajeraTab === "registro" ? "#F2F1EC" : "#8A8F98",
+              border: `1px solid ${cajeraTab === "registro" ? "#E4002B" : "#2A2E35"}`,
+            }}
+          >
+            Registro
+          </button>
+          <button
+            type="button"
+            onClick={() => setCajeraTab("recordatorios")}
+            className="flex-1 min-w-[130px] rounded-lg py-3 font-semibold uppercase text-xs tracking-[0.1em] transition-colors relative"
+            style={{
+              fontFamily: "'Oswald',sans-serif",
+              background: cajeraTab === "recordatorios" ? "#E4002B" : "#1E2126",
+              color: cajeraTab === "recordatorios" ? "#F2F1EC" : "#8A8F98",
+              border: `1px solid ${cajeraTab === "recordatorios" ? "#E4002B" : "#2A2E35"}`,
+            }}
+          >
+            Recordatorios
+            {recordatorios.some((r) => r.destinatario === name && r.esDeAdmin && !r.leido) && (
+              <span
+                className="absolute rounded-full"
+                style={{ top: 6, right: 8, width: 9, height: 9, background: "#FFC72C", border: "1.5px solid #14161A" }}
+              />
+            )}
+          </button>
+        </div>
+
+        {cajeraTab === "registro" && (
+        <>
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <Field label="Fecha">
             <input
@@ -2444,6 +2488,12 @@ function CajeraView({ onExit }) {
             )}
           </div>
         </div>
+        </>
+        )}
+
+        {cajeraTab === "recordatorios" && (
+        <RecordatoriosPanel mode="asesor" personName={name} recordatorios={recordatorios} setRecordatorios={setRecordatorios} />
+        )}
       </div>
     </div>
   );
