@@ -34,6 +34,12 @@ const COMPROBANTE_TIPOS = ["TALLER", "COBRO", "POST", "OTRO"];
 const TIPO_VENTA = ["MOTOCICLETA", "PRODUCTO DE FUERZA"];
 const isMoto = (s) => (s.tipo || "MOTOCICLETA") === "MOTOCICLETA";
 
+const TEMPERATURAS = [
+  { key: "BAJA", color: "#4A90D9" },
+  { key: "MEDIA", color: "#FFC72C" },
+  { key: "ALTA", color: "#E4002B" },
+];
+
 const ENTREGA_PASOS = [
   { key: "facturaMatriculacion", label: "Entregar factura a matriculación", auto: false },
   { key: "valoresMatriculacion", label: "Pedir valores de matriculación", auto: false },
@@ -246,6 +252,13 @@ async function loadRecordatorios() {
 }
 async function saveRecordatorios(rows) {
   return saveDoc("recordatorios", rows);
+}
+
+async function loadCRM() {
+  return (await loadDoc("crm-prospectos", [])) || [];
+}
+async function saveCRM(rows) {
+  return saveDoc("crm-prospectos", rows);
 }
 
 function subscribeTeamChat(callback) {
@@ -896,7 +909,307 @@ function RecordatoriosPanel({ mode, personName, recordatorios, setRecordatorios 
   );
 }
 
-// ---------- asesor view ----------
+// ---------- CRM (prospectos) ----------
+function CRMPanel({ personName, crm, setCrm }) {
+  const [nombre, setNombre] = useState("");
+  const [telefono, setTelefono] = useState("");
+  const [modeloInteres, setModeloInteres] = useState("");
+  const [metodoPago, setMetodoPago] = useState(FORMAS_PAGO[0]);
+  const [temperatura, setTemperatura] = useState("MEDIA");
+  const [proximaGestion, setProximaGestion] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const [filtroModelo, setFiltroModelo] = useState("Todos");
+  const [filtroPago, setFiltroPago] = useState("Todos");
+  const [expandedId, setExpandedId] = useState(null);
+  const [comentarioTexto, setComentarioTexto] = useState({});
+  const [proximaEdit, setProximaEdit] = useState({});
+
+  const misProspectos = useMemo(
+    () => crm.filter((p) => p.asesor === personName),
+    [crm, personName]
+  );
+
+  const modelosDisponibles = useMemo(
+    () => Array.from(new Set(misProspectos.map((p) => p.modeloInteres).filter(Boolean))),
+    [misProspectos]
+  );
+
+  const prospectosFiltrados = useMemo(() => {
+    return misProspectos
+      .filter((p) => filtroModelo === "Todos" || p.modeloInteres === filtroModelo)
+      .filter((p) => filtroPago === "Todos" || p.metodoPago === filtroPago)
+      .sort((a, b) => (a.creadoFecha < b.creadoFecha ? 1 : -1));
+  }, [misProspectos, filtroModelo, filtroPago]);
+
+  const persist = async (updated) => {
+    setCrm(updated);
+    const ok = await saveCRM(updated);
+    if (!ok) setError("No se pudo guardar. Revisa tu conexión.");
+    else setError("");
+  };
+
+  const handleAdd = async () => {
+    if (!nombre.trim() || !telefono.trim() || saving) return;
+    setSaving(true);
+    setError("");
+    const nuevo = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      asesor: personName,
+      nombre: nombre.trim(),
+      telefono: telefono.trim(),
+      modeloInteres: modeloInteres.trim(),
+      metodoPago,
+      temperatura,
+      proximaGestion: proximaGestion || null,
+      gestiones: [],
+      creadoFecha: new Date().toISOString(),
+    };
+    const latest = await loadCRM();
+    const updated = [nuevo, ...latest];
+    const ok = await saveCRM(updated);
+    if (ok) {
+      setCrm(updated);
+      setNombre("");
+      setTelefono("");
+      setModeloInteres("");
+      setMetodoPago(FORMAS_PAGO[0]);
+      setTemperatura("MEDIA");
+      setProximaGestion("");
+    } else {
+      setError("No se pudo guardar. Revisa tu conexión e intenta de nuevo.");
+    }
+    setSaving(false);
+  };
+
+  const handleDelete = async (id) => {
+    await persist(crm.filter((p) => p.id !== id));
+  };
+
+  const handleAddComentario = async (id) => {
+    const texto = (comentarioTexto[id] || "").trim();
+    if (!texto) return;
+    const updated = crm.map((p) => {
+      if (p.id !== id) return p;
+      const gestion = { id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, texto, fecha: new Date().toISOString() };
+      return { ...p, gestiones: [...(p.gestiones || []), gestion] };
+    });
+    await persist(updated);
+    setComentarioTexto((prev) => ({ ...prev, [id]: "" }));
+  };
+
+  const handleUpdateProxima = async (id) => {
+    const nuevaFecha = proximaEdit[id];
+    if (nuevaFecha === undefined) return;
+    const updated = crm.map((p) => (p.id === id ? { ...p, proximaGestion: nuevaFecha || null } : p));
+    await persist(updated);
+  };
+
+  const hoy = todayISO();
+
+  return (
+    <div>
+      <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-1" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
+        CRM · Prospectos
+      </div>
+      <div className="text-[11px] mb-3" style={{ color: "#8A8F98" }}>
+        Solo tú ves tus prospectos. Anota la gestión de cada cliente y cuándo darle seguimiento.
+      </div>
+
+      <div className="rounded-lg p-4 sm:p-5 mb-4" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Field label="Nombre">
+            <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nombre completo" className="rounded-md px-3 py-2.5 outline-none" style={inputStyle} />
+          </Field>
+          <Field label="Teléfono">
+            <input value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="09XXXXXXXX" type="tel" className="rounded-md px-3 py-2.5 outline-none" style={inputStyle} />
+          </Field>
+          <Field label="Modelo de interés">
+            <input value={modeloInteres} onChange={(e) => setModeloInteres(e.target.value)} placeholder="Ej. Honda CB 190R" className="rounded-md px-3 py-2.5 outline-none" style={inputStyle} />
+          </Field>
+          <Field label="Método de pago">
+            <select value={metodoPago} onChange={(e) => setMetodoPago(e.target.value)} className="rounded-md px-3 py-2.5 outline-none" style={inputStyle}>
+              {FORMAS_PAGO.map((f) => (
+                <option key={f}>{f}</option>
+              ))}
+            </select>
+          </Field>
+        </div>
+
+        <div className="mt-3">
+          <span className="text-[11px] uppercase tracking-[0.1em] font-medium" style={{ color: "#8A8F98" }}>Temperatura de venta</span>
+          <div className="flex gap-2 mt-1.5">
+            {TEMPERATURAS.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setTemperatura(t.key)}
+                className="flex-1 rounded-md py-2 text-xs font-semibold uppercase tracking-[0.06em] transition-colors"
+                style={{
+                  background: temperatura === t.key ? t.color : "#14161A",
+                  color: temperatura === t.key ? "#14161A" : "#8A8F98",
+                  border: `1px solid ${temperatura === t.key ? t.color : "#2A2E35"}`,
+                }}
+              >
+                {t.key}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-3">
+          <Field label="Próxima gestión">
+            <input type="date" value={proximaGestion} onChange={(e) => setProximaGestion(e.target.value)} className="rounded-md px-3 py-2.5 outline-none" style={inputStyle} />
+          </Field>
+        </div>
+
+        {error && (
+          <div className="text-xs rounded-md px-3 py-2 mt-3" style={{ color: "#FFD3D3", background: "#3A1F1F", border: "1px solid #E4002B" }}>
+            {error}
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={handleAdd}
+          disabled={!nombre.trim() || !telefono.trim() || saving}
+          className="rounded-md py-2.5 px-5 font-semibold uppercase text-xs tracking-[0.08em] flex items-center justify-center gap-2 mt-3 disabled:opacity-50"
+          style={{ background: "#E4002B", color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}
+        >
+          {saving ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+          Agregar prospecto
+        </button>
+      </div>
+
+      {misProspectos.length > 0 && (
+        <div className="flex flex-col sm:flex-row gap-2 mb-3">
+          <select value={filtroModelo} onChange={(e) => setFiltroModelo(e.target.value)} className="rounded-md px-3 py-2.5 text-sm outline-none flex-1" style={inputStyle}>
+            <option value="Todos">Todos los modelos</option>
+            {modelosDisponibles.map((m) => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
+          <select value={filtroPago} onChange={(e) => setFiltroPago(e.target.value)} className="rounded-md px-3 py-2.5 text-sm outline-none flex-1" style={inputStyle}>
+            <option value="Todos">Todas las formas de pago</option>
+            {FORMAS_PAGO.map((f) => (
+              <option key={f} value={f}>{f}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {prospectosFiltrados.length === 0 ? (
+        <div className="text-sm text-center py-8 rounded-lg" style={{ color: "#8A8F98", background: "#1E2126", border: "1px dashed #2A2E35" }}>
+          {misProspectos.length === 0 ? "No tienes prospectos todavía." : "Ningún prospecto coincide con este filtro."}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {prospectosFiltrados.map((p) => {
+            const temp = TEMPERATURAS.find((t) => t.key === p.temperatura) || TEMPERATURAS[1];
+            const vencida = p.proximaGestion && p.proximaGestion <= hoy;
+            const expanded = expandedId === p.id;
+            return (
+              <div key={p.id} className="rounded-lg overflow-hidden" style={{ background: "#1E2126", border: `1px solid ${vencida ? "#E4002B" : "#2A2E35"}` }}>
+                <button
+                  type="button"
+                  onClick={() => setExpandedId(expanded ? null : p.id)}
+                  className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-medium" style={{ color: "#F2F1EC" }}>{p.nombre}</span>
+                      <span
+                        className="text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0 font-semibold"
+                        style={{ background: temp.color, color: "#14161A" }}
+                      >
+                        {p.temperatura}
+                      </span>
+                    </div>
+                    <div className="text-[11px] mt-0.5" style={{ color: "#8A8F98" }}>
+                      {p.telefono} · {p.modeloInteres || "Sin modelo"} · {p.metodoPago}
+                    </div>
+                    {p.proximaGestion && (
+                      <div className="text-[11px] mt-0.5 font-medium" style={{ color: vencida ? "#FF8A8A" : "#8A8F98" }}>
+                        {vencida ? "Gestión pendiente · " : "Próxima gestión: "}
+                        {p.proximaGestion}
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-xs shrink-0" style={{ color: "#8A8F98" }}>{expanded ? "▲" : "▼"}</span>
+                </button>
+
+                {expanded && (
+                  <div className="px-4 py-3" style={{ background: "#181a1f", borderTop: "1px solid #2A2E35" }}>
+                    <div className="flex items-end gap-2 mb-3">
+                      <Field label="Actualizar próxima gestión">
+                        <input
+                          type="date"
+                          value={proximaEdit[p.id] !== undefined ? proximaEdit[p.id] : p.proximaGestion || ""}
+                          onChange={(e) => setProximaEdit((prev) => ({ ...prev, [p.id]: e.target.value }))}
+                          className="rounded-md px-3 py-2 outline-none text-xs"
+                          style={inputStyle}
+                        />
+                      </Field>
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateProxima(p.id)}
+                        className="rounded-md px-3 py-2 text-xs font-semibold uppercase"
+                        style={{ background: "#2A2E35", color: "#F2F1EC" }}
+                      >
+                        Guardar
+                      </button>
+                    </div>
+
+                    <div className="text-[11px] uppercase tracking-[0.1em] font-medium mb-2" style={{ color: "#8A8F98" }}>
+                      Historial de gestión
+                    </div>
+                    {(p.gestiones || []).length === 0 ? (
+                      <div className="text-xs mb-3" style={{ color: "#8A8F98" }}>Sin comentarios todavía.</div>
+                    ) : (
+                      <div className="flex flex-col gap-2 mb-3">
+                        {[...p.gestiones].reverse().map((g) => (
+                          <div key={g.id} className="rounded-md px-3 py-2" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+                            <div className="text-xs" style={{ color: "#F2F1EC" }}>{g.texto}</div>
+                            <div className="text-[10px] mt-1" style={{ color: "#8A8F98" }}>{formatDateTime(g.fecha)}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <textarea
+                      value={comentarioTexto[p.id] || ""}
+                      onChange={(e) => setComentarioTexto((prev) => ({ ...prev, [p.id]: e.target.value }))}
+                      placeholder="Escribe cómo fue la gestión..."
+                      rows={2}
+                      className="w-full rounded-md px-3 py-2 outline-none resize-none text-xs"
+                      style={inputStyle}
+                    />
+                    <div className="flex items-center justify-between mt-2">
+                      <button
+                        type="button"
+                        onClick={() => handleAddComentario(p.id)}
+                        disabled={!(comentarioTexto[p.id] || "").trim()}
+                        className="rounded-md px-4 py-2 text-xs font-semibold uppercase tracking-[0.06em] disabled:opacity-50"
+                        style={{ background: "#E4002B", color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}
+                      >
+                        Agregar comentario
+                      </button>
+                      <button onClick={() => handleDelete(p.id)} aria-label="Eliminar prospecto">
+                        <Trash2 size={14} color="#8A8F98" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ---------- asesor view ----------
 function AsesorView({ onExit }) {
   const [name, setName] = useState("");
@@ -930,16 +1243,18 @@ function AsesorView({ onExit }) {
   const [proyecciones, setProyecciones] = useState([]);
   const [proyeccionError, setProyeccionError] = useState("");
   const [recordatorios, setRecordatorios] = useState([]);
+  const [crm, setCrm] = useState([]);
 
   useEffect(() => {
     setStorageOk(storageAvailable());
     (async () => {
-      const [savedName, allSales, budget, allProyecciones, allRecordatorios] = await Promise.all([
+      const [savedName, allSales, budget, allProyecciones, allRecordatorios, allCrm] = await Promise.all([
         loadMyName(),
         loadSales(),
         loadBudget(monthKey),
         loadProyecciones(),
         loadRecordatorios(),
+        loadCRM(),
       ]);
       if (savedName && ASESORES.some((a) => a.nombre === savedName)) {
         setName(savedName);
@@ -950,6 +1265,7 @@ function AsesorView({ onExit }) {
       setBudgetDollars(budget.dollars || 0);
       setProyecciones(allProyecciones);
       setRecordatorios(allRecordatorios);
+      setCrm(allCrm);
       setLoading(false);
     })();
   }, []);
@@ -1246,6 +1562,25 @@ function AsesorView({ onExit }) {
               <span
                 className="absolute rounded-full"
                 style={{ top: 6, right: 8, width: 9, height: 9, background: "#FFC72C", border: "1.5px solid #14161A" }}
+              />
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setAsesorTab("crm")}
+            className="flex-1 min-w-[130px] rounded-lg py-3 font-semibold uppercase text-xs tracking-[0.1em] transition-colors relative"
+            style={{
+              fontFamily: "'Oswald',sans-serif",
+              background: asesorTab === "crm" ? "#E4002B" : "#1E2126",
+              color: asesorTab === "crm" ? "#F2F1EC" : "#8A8F98",
+              border: `1px solid ${asesorTab === "crm" ? "#E4002B" : "#2A2E35"}`,
+            }}
+          >
+            CRM
+            {crm.some((p) => p.asesor === name && p.proximaGestion && p.proximaGestion <= todayISO()) && (
+              <span
+                className="absolute rounded-full"
+                style={{ top: 6, right: 8, width: 9, height: 9, background: "#E4002B", border: "1.5px solid #14161A" }}
               />
             )}
           </button>
@@ -1653,6 +1988,10 @@ function AsesorView({ onExit }) {
 
         {asesorTab === "recordatorios" && (
         <RecordatoriosPanel mode="asesor" personName={name} recordatorios={recordatorios} setRecordatorios={setRecordatorios} />
+        )}
+
+        {asesorTab === "crm" && (
+        <CRMPanel personName={name} crm={crm} setCrm={setCrm} />
         )}
       </div>
     </div>
@@ -2528,11 +2867,16 @@ function AdminView({ onExit }) {
   const [egresos, setEgresos] = useState([]);
   const [proyecciones, setProyecciones] = useState([]);
   const [recordatorios, setRecordatorios] = useState([]);
+  const [crm, setCrm] = useState([]);
+  const [crmFiltroAsesor, setCrmFiltroAsesor] = useState("Todos");
+  const [crmFiltroModelo, setCrmFiltroModelo] = useState("Todos");
+  const [crmFiltroPago, setCrmFiltroPago] = useState("Todos");
+  const [crmExpandedId, setCrmExpandedId] = useState(null);
 
   useEffect(() => {
     if (!unlocked) return;
     (async () => {
-      const [allSales, budget, savedQuotes, allCaja, allTransfers, allEgresos, allProyecciones, allRecordatorios] = await Promise.all([
+      const [allSales, budget, savedQuotes, allCaja, allTransfers, allEgresos, allProyecciones, allRecordatorios, allCrm] = await Promise.all([
         loadSales(),
         loadBudget(monthKey),
         loadQuotes(monthKey),
@@ -2541,6 +2885,7 @@ function AdminView({ onExit }) {
         loadEgresos(),
         loadProyecciones(),
         loadRecordatorios(),
+        loadCRM(),
       ]);
       setSales(allSales);
       setBudgetUnits(budget.units || 0);
@@ -2552,6 +2897,7 @@ function AdminView({ onExit }) {
       setEgresos(allEgresos);
       setProyecciones(allProyecciones);
       setRecordatorios(allRecordatorios);
+      setCrm(allCrm);
       setLoading(false);
     })();
   }, [unlocked]);
@@ -2895,6 +3241,26 @@ function AdminView({ onExit }) {
 
   const totalFuerzaPeriod = fuerzaInPeriod.reduce((sum, s) => sum + (Number(s.valor) || 0), 0);
 
+  const crmModelos = useMemo(() => Array.from(new Set(crm.map((p) => p.modeloInteres).filter(Boolean))), [crm]);
+  const crmFiltrado = useMemo(() => {
+    return crm
+      .filter((p) => crmFiltroAsesor === "Todos" || p.asesor === crmFiltroAsesor)
+      .filter((p) => crmFiltroModelo === "Todos" || p.modeloInteres === crmFiltroModelo)
+      .filter((p) => crmFiltroPago === "Todos" || p.metodoPago === crmFiltroPago)
+      .sort((a, b) => (a.creadoFecha < b.creadoFecha ? 1 : -1));
+  }, [crm, crmFiltroAsesor, crmFiltroModelo, crmFiltroPago]);
+  const crmPorTemperatura = useMemo(() => {
+    const map = { BAJA: 0, MEDIA: 0, ALTA: 0 };
+    crm.forEach((p) => {
+      if (map[p.temperatura] !== undefined) map[p.temperatura] += 1;
+    });
+    return map;
+  }, [crm]);
+  const crmVencidas = useMemo(
+    () => crm.filter((p) => p.proximaGestion && p.proximaGestion <= todayISO()).length,
+    [crm]
+  );
+
   const exportProyeccionesExcel = () => {
     const rows = proyecciones.map((p) => ({
       Asesor: p.asesor,
@@ -3076,6 +3442,19 @@ function AdminView({ onExit }) {
             }}
           >
             Recordatorios
+          </button>
+          <button
+            type="button"
+            onClick={() => setAdminTab("crm")}
+            className="flex-1 min-w-[130px] rounded-lg py-3 font-semibold uppercase text-xs tracking-[0.1em] transition-colors"
+            style={{
+              fontFamily: "'Oswald',sans-serif",
+              background: adminTab === "crm" ? "#E4002B" : "#1E2126",
+              color: adminTab === "crm" ? "#F2F1EC" : "#8A8F98",
+              border: `1px solid ${adminTab === "crm" ? "#E4002B" : "#2A2E35"}`,
+            }}
+          >
+            CRM
           </button>
         </div>
 
@@ -3875,6 +4254,127 @@ function AdminView({ onExit }) {
 
         {adminTab === "recordatorios" && (
         <RecordatoriosPanel mode="admin" personName="Alejandro" recordatorios={recordatorios} setRecordatorios={setRecordatorios} />
+        )}
+
+        {adminTab === "crm" && (
+        <div>
+          <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-1" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
+            CRM · Prospectos de todo el equipo
+          </div>
+          <div className="text-[11px] mb-3" style={{ color: "#8A8F98" }}>
+            Vista de solo lectura — cada asesor gestiona sus propios prospectos.
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            <div className="rounded-lg p-4 flex flex-col justify-center gap-1" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+              <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#8A8F98" }}>Total prospectos</span>
+              <span className="font-mono font-semibold text-lg" style={{ color: "#F2F1EC" }}>{crm.length}</span>
+            </div>
+            <div className="rounded-lg p-4 flex flex-col justify-center gap-1" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+              <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#8A8F98" }}>Temperatura alta</span>
+              <span className="font-mono font-semibold text-lg" style={{ color: "#E4002B" }}>{crmPorTemperatura.ALTA}</span>
+            </div>
+            <div className="rounded-lg p-4 flex flex-col justify-center gap-1" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+              <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#8A8F98" }}>Temperatura media</span>
+              <span className="font-mono font-semibold text-lg" style={{ color: "#FFC72C" }}>{crmPorTemperatura.MEDIA}</span>
+            </div>
+            <div className="rounded-lg p-4 flex flex-col justify-center gap-1" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+              <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#8A8F98" }}>Gestiones vencidas</span>
+              <span className="font-mono font-semibold text-lg" style={{ color: crmVencidas > 0 ? "#FF8A8A" : "#F2F1EC" }}>{crmVencidas}</span>
+            </div>
+          </div>
+
+          {crm.length > 0 && (
+            <div className="flex flex-col sm:flex-row gap-2 mb-4">
+              <select value={crmFiltroAsesor} onChange={(e) => setCrmFiltroAsesor(e.target.value)} className="rounded-md px-3 py-2.5 text-sm outline-none flex-1" style={inputStyle}>
+                <option value="Todos">Todos los asesores</option>
+                {ASESORES.map((a) => (
+                  <option key={a.nombre} value={a.nombre}>{a.nombre}</option>
+                ))}
+              </select>
+              <select value={crmFiltroModelo} onChange={(e) => setCrmFiltroModelo(e.target.value)} className="rounded-md px-3 py-2.5 text-sm outline-none flex-1" style={inputStyle}>
+                <option value="Todos">Todos los modelos</option>
+                {crmModelos.map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+              <select value={crmFiltroPago} onChange={(e) => setCrmFiltroPago(e.target.value)} className="rounded-md px-3 py-2.5 text-sm outline-none flex-1" style={inputStyle}>
+                <option value="Todos">Todas las formas de pago</option>
+                {FORMAS_PAGO.map((f) => (
+                  <option key={f} value={f}>{f}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {crmFiltrado.length === 0 ? (
+            <div className="text-sm text-center py-8 rounded-lg" style={{ color: "#8A8F98", background: "#1E2126", border: "1px dashed #2A2E35" }}>
+              {crm.length === 0 ? "Nadie ha registrado prospectos todavía." : "Ningún prospecto coincide con este filtro."}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {crmFiltrado.map((p) => {
+                const temp = TEMPERATURAS.find((t) => t.key === p.temperatura) || TEMPERATURAS[1];
+                const vencida = p.proximaGestion && p.proximaGestion <= todayISO();
+                const expanded = crmExpandedId === p.id;
+                return (
+                  <div key={p.id} className="rounded-lg overflow-hidden" style={{ background: "#1E2126", border: `1px solid ${vencida ? "#E4002B" : "#2A2E35"}` }}>
+                    <button
+                      type="button"
+                      onClick={() => setCrmExpandedId(expanded ? null : p.id)}
+                      className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-medium" style={{ color: "#F2F1EC" }}>{p.nombre}</span>
+                          <span
+                            className="text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0 font-semibold"
+                            style={{ background: temp.color, color: "#14161A" }}
+                          >
+                            {p.temperatura}
+                          </span>
+                          <span className="text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0" style={{ background: "#14161A", color: "#8A8F98", border: "1px solid #2A2E35" }}>
+                            {p.asesor}
+                          </span>
+                        </div>
+                        <div className="text-[11px] mt-0.5" style={{ color: "#8A8F98" }}>
+                          {p.telefono} · {p.modeloInteres || "Sin modelo"} · {p.metodoPago}
+                        </div>
+                        {p.proximaGestion && (
+                          <div className="text-[11px] mt-0.5 font-medium" style={{ color: vencida ? "#FF8A8A" : "#8A8F98" }}>
+                            {vencida ? "Gestión pendiente · " : "Próxima gestión: "}
+                            {p.proximaGestion}
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-xs shrink-0" style={{ color: "#8A8F98" }}>{expanded ? "▲" : "▼"}</span>
+                    </button>
+
+                    {expanded && (
+                      <div className="px-4 py-3" style={{ background: "#181a1f", borderTop: "1px solid #2A2E35" }}>
+                        <div className="text-[11px] uppercase tracking-[0.1em] font-medium mb-2" style={{ color: "#8A8F98" }}>
+                          Historial de gestión
+                        </div>
+                        {(p.gestiones || []).length === 0 ? (
+                          <div className="text-xs" style={{ color: "#8A8F98" }}>Sin comentarios todavía.</div>
+                        ) : (
+                          <div className="flex flex-col gap-2">
+                            {[...p.gestiones].reverse().map((g) => (
+                              <div key={g.id} className="rounded-md px-3 py-2" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+                                <div className="text-xs" style={{ color: "#F2F1EC" }}>{g.texto}</div>
+                                <div className="text-[10px] mt-1" style={{ color: "#8A8F98" }}>{formatDateTime(g.fecha)}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
         )}
       </div>
     </div>
