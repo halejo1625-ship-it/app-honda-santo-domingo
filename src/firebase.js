@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore, doc, getDoc, setDoc, onSnapshot, updateDoc, arrayUnion } from "firebase/firestore";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 // ⚠️ Configuración de tu proyecto Firebase (honda-santo-domingo)
 // (Configuración del proyecto → tu app web → SDK setup and configuration)
@@ -15,6 +16,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
+export const storage = getStorage(app);
 
 const COLLECTION = "app_data";
 
@@ -76,5 +78,18 @@ export async function sendChatMessage(message) {
       console.error("Chat send error:", e2);
       return false;
     }
+  }
+}
+
+// ---------- documentos (guía comercial / catálogo) — Firebase Storage ----------
+export async function uploadDocumentFile(key, file) {
+  try {
+    const fileRef = ref(storage, `documents/${key}.pdf`);
+    await withTimeout(uploadBytes(fileRef, file), 60000);
+    const url = await getDownloadURL(fileRef);
+    return url;
+  } catch (e) {
+    console.error("Upload error:", e);
+    return null;
   }
 }
