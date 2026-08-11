@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc, onSnapshot, updateDoc, arrayUnion } from "firebase/firestore";
 
 // ⚠️ Configuración de tu proyecto Firebase (honda-santo-domingo)
 // (Configuración del proyecto → tu app web → SDK setup and configuration)
@@ -44,5 +44,37 @@ export async function saveDoc(key, value) {
   } catch (e) {
     console.error("Firestore save error:", key, e);
     return false;
+  }
+}
+
+// ---------- chat interno en tiempo real ----------
+const CHAT_DOC = doc(db, COLLECTION, "team-chat");
+
+// Devuelve una función para cancelar la suscripción (llamarla al desmontar el componente)
+export function subscribeChat(callback) {
+  return onSnapshot(
+    CHAT_DOC,
+    (snap) => {
+      callback(snap.exists() ? snap.data().messages || [] : []);
+    },
+    (err) => {
+      console.error("Chat subscription error:", err);
+    }
+  );
+}
+
+export async function sendChatMessage(message) {
+  try {
+    await updateDoc(CHAT_DOC, { messages: arrayUnion(message) });
+    return true;
+  } catch (e) {
+    // El documento probablemente no existe todavía — lo creamos.
+    try {
+      await setDoc(CHAT_DOC, { messages: [message] });
+      return true;
+    } catch (e2) {
+      console.error("Chat send error:", e2);
+      return false;
+    }
   }
 }
