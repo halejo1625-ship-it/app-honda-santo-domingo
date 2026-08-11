@@ -638,32 +638,58 @@ function ChatWidget({ senderName, senderRole }) {
 }
 
 // ---------- recordatorios ----------
-function RecordatoriosPanel({ autor, rol }) {
-  const [recordatorios, setRecordatorios] = useState([]);
-  const [loading, setLoading] = useState(true);
+const DIAS_PARA_BORRAR = 3;
+const msSinceIso = (iso) => Date.now() - new Date(iso).getTime();
+
+function RecordatoriosPanel({ mode, personName, recordatorios, setRecordatorios }) {
   const [texto, setTexto] = useState("");
+  const [destinatario, setDestinatario] = useState(ASESORES[0].nombre);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    (async () => {
-      const rows = await loadRecordatorios();
-      setRecordatorios(rows);
-      setLoading(false);
-    })();
-  }, []);
+  const misRecordatorios = useMemo(() => {
+    if (mode !== "asesor") return [];
+    return recordatorios
+      .filter((r) => r.destinatario === personName)
+      .sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
+  }, [recordatorios, personName, mode]);
 
-  const handleAdd = async () => {
+  const persist = async (updated) => {
+    setRecordatorios(updated);
+    const ok = await saveRecordatorios(updated);
+    if (!ok) setError("No se pudo guardar. Revisa tu conexión.");
+    else setError("");
+  };
+
+  // Al abrir la pestaña como asesor, marca como leídos los recordatorios del admin
+  useEffect(() => {
+    if (mode !== "asesor") return;
+    const pendientesPorLeer = recordatorios.filter(
+      (r) => r.destinatario === personName && r.esDeAdmin && !r.leido
+    );
+    if (pendientesPorLeer.length === 0) return;
+    const updated = recordatorios.map((r) =>
+      r.destinatario === personName && r.esDeAdmin && !r.leido ? { ...r, leido: true } : r
+    );
+    persist(updated);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, personName]);
+
+  const handleAddPropio = async () => {
     const trimmed = texto.trim();
     if (!trimmed || saving) return;
     setSaving(true);
     setError("");
     const nuevo = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      autor,
-      rol,
+      destinatario: personName,
+      creadoPor: personName,
+      esDeAdmin: false,
       texto: trimmed,
       fecha: new Date().toISOString(),
+      completado: false,
+      completadoFecha: null,
+      leido: true,
     };
     const latest = await loadRecordatorios();
     const updated = [nuevo, ...latest];
@@ -677,11 +703,139 @@ function RecordatoriosPanel({ autor, rol }) {
     setSaving(false);
   };
 
+  const handleAddParaAsesor = async () => {
+    const trimmed = texto.trim();
+    if (!trimmed || saving) return;
+    setSaving(true);
+    setError("");
+    const nuevo = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      destinatario,
+      creadoPor: "Administrador",
+      esDeAdmin: true,
+      texto: trimmed,
+      fecha: new Date().toISOString(),
+      completado: false,
+      completadoFecha: null,
+      leido: false,
+    };
+    const latest = await loadRecordatorios();
+    const updated = [nuevo, ...latest];
+    const ok = await saveRecordatorios(updated);
+    if (ok) {
+      setRecordatorios(updated);
+      setTexto("");
+    } else {
+      setError("No se pudo guardar. Revisa tu conexión e intenta de nuevo.");
+    }
+    setSaving(false);
+  };
+
+  const toggleCompletado = async (id) => {
+    const updated = recordatorios.map((r) => {
+      if (r.id !== id) return r;
+      const nowChecked = !r.completado;
+      return { ...r, completado: nowChecked, completadoFecha: nowChecked ? new Date().toISOString() : null };
+    });
+    await persist(updated);
+  };
+
   const handleDelete = async (id) => {
     const updated = recordatorios.filter((r) => r.id !== id);
-    setRecordatorios(updated);
-    await saveRecordatorios(updated);
+    await persist(updated);
   };
+
+  const puedeBorrar = (r) =>
+    r.completado && r.completadoFecha && msSinceIso(r.completadoFecha) >= DIAS_PARA_BORRAR * 24 * 60 * 60 * 1000;
+
+  const renderItem = (r) => (
+    <div key={r.id} className="rounded-lg px-4 py-3 flex items-start gap-3" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+      <input type="checkbox" checked={r.completado} onChange={() => toggleCompletado(r.id)} className="mt-1" />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          {r.esDeAdmin && (
+            <span
+              className="text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0"
+              style={{ background: "#3A1F1F", color: "#FF8A8A", border: "1px solid #E4002B" }}
+            >
+              Del administrador
+            </span>
+          )}
+          {mode === "admin" && (
+            <span className="text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0" style={{ background: "#14161A", color: "#8A8F98", border: "1px solid #2A2E35" }}>
+              Para: {r.destinatario}
+            </span>
+          )}
+        </div>
+        <div className="text-sm mt-1" style={{ color: r.completado ? "#8A8F98" : "#F2F1EC", textDecoration: r.completado ? "line-through" : "none" }}>
+          {r.texto}
+        </div>
+        <div className="text-[11px] mt-1" style={{ color: "#8A8F98" }}>
+          {r.creadoPor} · {formatDateTime(r.fecha)}
+          {r.completado && r.completadoFecha && <> · Completado {formatDateTime(r.completadoFecha)}</>}
+        </div>
+      </div>
+      {puedeBorrar(r) ? (
+        <button onClick={() => handleDelete(r.id)} aria-label="Eliminar" className="shrink-0">
+          <Trash2 size={14} color="#8A8F98" />
+        </button>
+      ) : r.completado ? (
+        <span className="text-[9px] shrink-0" style={{ color: "#4A4E56" }}>
+          Se puede borrar en {Math.max(0, DIAS_PARA_BORRAR - Math.floor(msSinceIso(r.completadoFecha) / 86400000))}d
+        </span>
+      ) : null}
+    </div>
+  );
+
+  if (mode === "asesor") {
+    return (
+      <div>
+        <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-1" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
+          Mis recordatorios
+        </div>
+        <div className="text-[11px] mb-3" style={{ color: "#8A8F98" }}>
+          Solo tú ves esta lista. Al marcar uno como hecho, se puede borrar recién después de {DIAS_PARA_BORRAR} días.
+        </div>
+
+        <div className="rounded-lg p-4 sm:p-5 mb-4" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+          <textarea
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            placeholder="Escribe un recordatorio para ti..."
+            rows={2}
+            className="w-full rounded-md px-3 py-2.5 outline-none resize-none"
+            style={inputStyle}
+          />
+          {error && (
+            <div className="text-xs rounded-md px-3 py-2 mt-2" style={{ color: "#FFD3D3", background: "#3A1F1F", border: "1px solid #E4002B" }}>
+              {error}
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={handleAddPropio}
+            disabled={!texto.trim() || saving}
+            className="rounded-md py-2.5 px-5 font-semibold uppercase text-xs tracking-[0.08em] flex items-center justify-center gap-2 mt-3 disabled:opacity-50"
+            style={{ background: "#E4002B", color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}
+          >
+            {saving ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+            Agregar recordatorio
+          </button>
+        </div>
+
+        {misRecordatorios.length === 0 ? (
+          <div className="text-sm text-center py-8 rounded-lg" style={{ color: "#8A8F98", background: "#1E2126", border: "1px dashed #2A2E35" }}>
+            No tienes recordatorios todavía.
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">{misRecordatorios.map(renderItem)}</div>
+        )}
+      </div>
+    );
+  }
+
+  // ---- modo administrador ----
+  const todosOrdenados = [...recordatorios].sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
 
   return (
     <div>
@@ -689,14 +843,21 @@ function RecordatoriosPanel({ autor, rol }) {
         Recordatorios
       </div>
       <div className="text-[11px] mb-3" style={{ color: "#8A8F98" }}>
-        Espacio compartido entre asesores y administrador. La fecha y hora se registran solas.
+        Envía un recordatorio a un asesor específico — le va a aparecer marcado como nuevo en su pestaña.
       </div>
 
-      <div className="rounded-lg p-4 sm:p-5 mb-4" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+      <div className="rounded-lg p-4 sm:p-5 mb-4" style={{ background: "#1E2126", border: "1px solid #E4002B" }}>
+        <Field label="Para">
+          <select value={destinatario} onChange={(e) => setDestinatario(e.target.value)} className="rounded-md px-3 py-2.5 outline-none mb-3" style={inputStyle}>
+            {ASESORES.map((a) => (
+              <option key={a.nombre} value={a.nombre}>{a.nombre}</option>
+            ))}
+          </select>
+        </Field>
         <textarea
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
-          placeholder="Escribe un recordatorio..."
+          placeholder="Escribe el recordatorio..."
           rows={2}
           className="w-full rounded-md px-3 py-2.5 outline-none resize-none"
           style={inputStyle}
@@ -708,45 +869,31 @@ function RecordatoriosPanel({ autor, rol }) {
         )}
         <button
           type="button"
-          onClick={handleAdd}
+          onClick={handleAddParaAsesor}
           disabled={!texto.trim() || saving}
           className="rounded-md py-2.5 px-5 font-semibold uppercase text-xs tracking-[0.08em] flex items-center justify-center gap-2 mt-3 disabled:opacity-50"
           style={{ background: "#E4002B", color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}
         >
           {saving ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-          Agregar recordatorio
+          Enviar recordatorio
         </button>
       </div>
 
-      {loading ? (
-        <div className="flex items-center justify-center py-10">
-          <Loader2 className="animate-spin" color="#E4002B" size={22} />
-        </div>
-      ) : recordatorios.length === 0 ? (
+      <div className="text-[11px] uppercase tracking-[0.12em] font-medium mb-2" style={{ color: "#8A8F98" }}>
+        Todos los recordatorios
+      </div>
+      {todosOrdenados.length === 0 ? (
         <div className="text-sm text-center py-8 rounded-lg" style={{ color: "#8A8F98", background: "#1E2126", border: "1px dashed #2A2E35" }}>
           No hay recordatorios todavía.
         </div>
       ) : (
-        <div className="flex flex-col gap-2">
-          {recordatorios.map((r) => (
-            <div key={r.id} className="rounded-lg px-4 py-3 flex items-start justify-between gap-3" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
-              <div className="min-w-0">
-                <div className="text-sm" style={{ color: "#F2F1EC" }}>{r.texto}</div>
-                <div className="text-[11px] mt-1" style={{ color: "#8A8F98" }}>
-                  {r.autor} · {r.rol} · {formatDateTime(r.fecha)}
-                </div>
-              </div>
-              <button onClick={() => handleDelete(r.id)} aria-label="Eliminar" className="shrink-0">
-                <Trash2 size={14} color="#8A8F98" />
-              </button>
-            </div>
-          ))}
-        </div>
+        <div className="flex flex-col gap-2">{todosOrdenados.map(renderItem)}</div>
       )}
     </div>
   );
 }
 
+// ---------- asesor view ----------
 // ---------- asesor view ----------
 function AsesorView({ onExit }) {
   const [name, setName] = useState("");
@@ -779,15 +926,17 @@ function AsesorView({ onExit }) {
   const [asesorTab, setAsesorTab] = useState("registro");
   const [proyecciones, setProyecciones] = useState([]);
   const [proyeccionError, setProyeccionError] = useState("");
+  const [recordatorios, setRecordatorios] = useState([]);
 
   useEffect(() => {
     setStorageOk(storageAvailable());
     (async () => {
-      const [savedName, allSales, budget, allProyecciones] = await Promise.all([
+      const [savedName, allSales, budget, allProyecciones, allRecordatorios] = await Promise.all([
         loadMyName(),
         loadSales(),
         loadBudget(monthKey),
         loadProyecciones(),
+        loadRecordatorios(),
       ]);
       if (savedName && ASESORES.some((a) => a.nombre === savedName)) {
         setName(savedName);
@@ -797,6 +946,7 @@ function AsesorView({ onExit }) {
       setBudgetUnits(budget.units || 0);
       setBudgetDollars(budget.dollars || 0);
       setProyecciones(allProyecciones);
+      setRecordatorios(allRecordatorios);
       setLoading(false);
     })();
   }, []);
@@ -1080,7 +1230,7 @@ function AsesorView({ onExit }) {
           <button
             type="button"
             onClick={() => setAsesorTab("recordatorios")}
-            className="flex-1 min-w-[130px] rounded-lg py-3 font-semibold uppercase text-xs tracking-[0.1em] transition-colors"
+            className="flex-1 min-w-[130px] rounded-lg py-3 font-semibold uppercase text-xs tracking-[0.1em] transition-colors relative"
             style={{
               fontFamily: "'Oswald',sans-serif",
               background: asesorTab === "recordatorios" ? "#E4002B" : "#1E2126",
@@ -1089,6 +1239,12 @@ function AsesorView({ onExit }) {
             }}
           >
             Recordatorios
+            {recordatorios.some((r) => r.destinatario === name && r.esDeAdmin && !r.leido) && (
+              <span
+                className="absolute rounded-full"
+                style={{ top: 6, right: 8, width: 9, height: 9, background: "#FFC72C", border: "1.5px solid #14161A" }}
+              />
+            )}
           </button>
         </div>
 
@@ -1493,7 +1649,7 @@ function AsesorView({ onExit }) {
         )}
 
         {asesorTab === "recordatorios" && (
-        <RecordatoriosPanel autor={name} rol="Asesor" />
+        <RecordatoriosPanel mode="asesor" personName={name} recordatorios={recordatorios} setRecordatorios={setRecordatorios} />
         )}
       </div>
     </div>
@@ -2321,11 +2477,12 @@ function AdminView({ onExit }) {
   const [transferencias, setTransferencias] = useState([]);
   const [egresos, setEgresos] = useState([]);
   const [proyecciones, setProyecciones] = useState([]);
+  const [recordatorios, setRecordatorios] = useState([]);
 
   useEffect(() => {
     if (!unlocked) return;
     (async () => {
-      const [allSales, budget, savedQuotes, allCaja, allTransfers, allEgresos, allProyecciones] = await Promise.all([
+      const [allSales, budget, savedQuotes, allCaja, allTransfers, allEgresos, allProyecciones, allRecordatorios] = await Promise.all([
         loadSales(),
         loadBudget(monthKey),
         loadQuotes(monthKey),
@@ -2333,6 +2490,7 @@ function AdminView({ onExit }) {
         loadTransferencias(),
         loadEgresos(),
         loadProyecciones(),
+        loadRecordatorios(),
       ]);
       setSales(allSales);
       setBudgetUnits(budget.units || 0);
@@ -2343,6 +2501,7 @@ function AdminView({ onExit }) {
       setTransferencias(allTransfers);
       setEgresos(allEgresos);
       setProyecciones(allProyecciones);
+      setRecordatorios(allRecordatorios);
       setLoading(false);
     })();
   }, [unlocked]);
@@ -3665,7 +3824,7 @@ function AdminView({ onExit }) {
         )}
 
         {adminTab === "recordatorios" && (
-        <RecordatoriosPanel autor="Alejandro" rol="Administrador" />
+        <RecordatoriosPanel mode="admin" personName="Alejandro" recordatorios={recordatorios} setRecordatorios={setRecordatorios} />
         )}
       </div>
     </div>
