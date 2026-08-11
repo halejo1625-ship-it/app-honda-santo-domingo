@@ -2717,7 +2717,7 @@ function AdminView({ onExit }) {
     salesInPeriod.forEach((s) => {
       const key = s.asesor.trim() || "Sin nombre";
       if (!map[key]) map[key] = { asesor: key, total: 0, count: 0 };
-      map[key].total += s.valor;
+      map[key].total += s.valor / 1.15;
       map[key].count += 1;
     });
     return Object.values(map)
@@ -2735,7 +2735,7 @@ function AdminView({ onExit }) {
       const key = s.modelo.trim() || "Sin modelo";
       if (!map[key]) map[key] = { modelo: key, count: 0, total: 0 };
       map[key].count += 1;
-      map[key].total += s.valor;
+      map[key].total += s.valor / 1.15;
     });
     return Object.values(map).sort((a, b) => b.count - a.count);
   }, [salesInPeriod]);
@@ -2746,7 +2746,7 @@ function AdminView({ onExit }) {
       const key = s.origen || "Sin origen";
       if (!map[key]) map[key] = { origen: key, count: 0, total: 0 };
       map[key].count += 1;
-      map[key].total += s.valor;
+      map[key].total += s.valor / 1.15;
     });
     return Object.values(map).sort((a, b) => b.count - a.count);
   }, [salesInPeriod]);
@@ -2757,7 +2757,7 @@ function AdminView({ onExit }) {
       const key = s.formaPago || "Sin especificar";
       if (!map[key]) map[key] = { formaPago: key, count: 0, total: 0 };
       map[key].count += 1;
-      map[key].total += s.valor;
+      map[key].total += s.valor / 1.15;
     });
     return Object.values(map).sort((a, b) => b.count - a.count);
   }, [salesInPeriod]);
