@@ -4436,7 +4436,11 @@ function AdminView({ onExit }) {
                 </thead>
                 <tbody>
                   {[...proyecciones]
-                    .sort((a, b) => (Number(b.valor) || 0) - (Number(a.valor) || 0))
+                    .sort((a, b) => {
+                      const cmp = a.asesor.localeCompare(b.asesor);
+                      if (cmp !== 0) return cmp;
+                      return (Number(b.valor) || 0) - (Number(a.valor) || 0);
+                    })
                     .map((p, i) => (
                       <tr key={p.id} style={{ background: i % 2 ? "#1a1d22" : "#1E2126", color: "#F2F1EC" }}>
                         <td className="px-3 py-2.5 whitespace-nowrap">{p.asesor}</td>
