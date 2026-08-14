@@ -495,7 +495,10 @@ function RoleSelect({ onPick }) {
             >
               Honda Santo Domingo
             </div>
-            <div className="text-xs tracking-[0.15em] uppercase" style={{ color: "#8A8F98" }}>
+            <div className="text-xs tracking-[0.15em] uppercase" style={{ color: "#E4002B", fontWeight: 600 }}>
+              Compass
+            </div>
+            <div className="text-[10px] tracking-[0.1em] uppercase mt-0.5" style={{ color: "#8A8F98" }}>
               Gestión Integral de Procesos
             </div>
           </div>
@@ -4818,7 +4821,7 @@ function AdminView({ onExit }) {
             <table className="w-full text-xs mb-6" style={{ borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: "#14161A" }}>
-                  {["Asesor", "Ventas", "Total", "Ticket prom.", "% meta", "Debería ir en", "Cotizados", "Tasa cierre"].map((h) => (
+                  {["Asesor", "Ventas", "Total", "Ticket prom.", "% meta", "Debería ir en", "Falta $", "Falta motos", "Cotizados", "Tasa cierre"].map((h) => (
                     <th key={h} className="text-left px-2 py-2" style={{ color: "#F2F1EC" }}>{h}</th>
                   ))}
                 </tr>
@@ -4828,6 +4831,8 @@ function AdminView({ onExit }) {
                   const ranked = byAsesor.find((r) => normalizeKey(r.asesor) === normalizeKey(a.nombre));
                   const presu = presupuestoPorAsesor.find((p) => p.asesor === a.nombre);
                   const perf = asesorPerformance.find((r) => r.asesor === a.nombre);
+                  const faltaDolares = presu ? Math.max(0, presu.metaDolares - presu.dolares) : 0;
+                  const faltaMotos = presu ? Math.max(0, Math.ceil(presu.metaUnidades - presu.unidades)) : 0;
                   return (
                     <tr key={a.nombre} style={{ background: i % 2 ? "#E9E7DF" : "#FFFFFF" }}>
                       <td className="px-2 py-2 font-semibold">{a.nombre}</td>
@@ -4839,6 +4844,12 @@ function AdminView({ onExit }) {
                       </td>
                       <td className="px-2 py-2 font-mono" style={{ color: "#545862" }}>
                         {presu && presu.metaDolares > 0 ? `${Math.round(monthProgressPct())}% (${money(presu.metaDolares * (monthProgressPct() / 100))})` : "—"}
+                      </td>
+                      <td className="px-2 py-2 font-mono font-semibold" style={{ color: faltaDolares > 0 ? "#E4002B" : "#2E7D32" }}>
+                        {presu && presu.metaDolares > 0 ? (faltaDolares > 0 ? money(faltaDolares) : "Cumplido") : "—"}
+                      </td>
+                      <td className="px-2 py-2 font-mono font-semibold" style={{ color: faltaMotos > 0 ? "#E4002B" : "#2E7D32" }}>
+                        {presu && presu.metaUnidades > 0 ? (faltaMotos > 0 ? faltaMotos : "Cumplido") : "—"}
                       </td>
                       <td className="px-2 py-2">{perf ? perf.cotizaciones : 0}</td>
                       <td className="px-2 py-2 font-mono">{perf && perf.tasaCierre !== null ? `${Math.round(perf.tasaCierre)}%` : "—"}</td>
@@ -4886,7 +4897,7 @@ function AdminView({ onExit }) {
             </div>
 
             <div className="text-[10px] pt-3" style={{ color: "#8A8F98", borderTop: "1px solid #DEDCD3" }}>
-              Documento generado automáticamente desde GIP — Honda Santo Domingo. Preparado por Alejandro A., Jefe de Tienda.
+              Documento generado automáticamente desde Compass — Honda Santo Domingo. Preparado por Alejandro A., Jefe de Tienda.
             </div>
           </div>
         </div>
