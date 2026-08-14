@@ -114,6 +114,28 @@ const daysLeftInMonth = () => {
   const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   return lastDay - now.getDate();
 };
+// % del mes ya transcurrido — es en qué % deberían ir ventas/presupuesto si el
+// ritmo fuera parejo todos los días del mes.
+// % del mes ya transcurrido, contando solo días hábiles de lunes a sábado
+// (los domingos no cuentan ni para el total del mes ni para lo transcurrido).
+const monthProgressPct = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  const today = now.getDate();
+
+  let totalDiasHabiles = 0;
+  let diasHabilesTranscurridos = 0;
+  for (let d = 1; d <= lastDay; d++) {
+    const esDomingo = new Date(year, month, d).getDay() === 0;
+    if (!esDomingo) {
+      totalDiasHabiles++;
+      if (d <= today) diasHabilesTranscurridos++;
+    }
+  }
+  return totalDiasHabiles > 0 ? (diasHabilesTranscurridos / totalDiasHabiles) * 100 : 0;
+};
 
 const FRASES_MES = [
   "Enero arranca: cada venta de hoy es motor para todo el año.", // Enero
@@ -372,9 +394,10 @@ function MetricOdometer({ label, value, prefix }) {
   );
 }
 
-function ProgressBar({ label, current, target, formatCurrent, formatTarget, pct }) {
+function ProgressBar({ label, current, target, formatCurrent, formatTarget, pct, expectedPct }) {
   const clamped = Math.min(100, Math.max(0, pct));
   const barColor = pct >= 100 ? "#2E7D32" : pct >= 70 ? "#FFC72C" : "#E4002B";
+  const expClamped = expectedPct !== undefined ? Math.min(100, Math.max(0, expectedPct)) : null;
   return (
     <div className="rounded-lg p-4 flex flex-col gap-2.5" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
       <div className="flex items-center justify-between">
@@ -385,14 +408,23 @@ function ProgressBar({ label, current, target, formatCurrent, formatTarget, pct 
           {Math.round(pct)}%
         </span>
       </div>
-      <div className="w-full h-2.5 rounded-full overflow-hidden" style={{ background: "#14161A", border: "1px solid #2A2E35" }}>
+      <div className="w-full h-2.5 rounded-full overflow-hidden relative" style={{ background: "#14161A", border: "1px solid #2A2E35" }}>
         <div
           className="h-full rounded-full transition-all"
           style={{ width: `${clamped}%`, background: barColor }}
         />
+        {expClamped !== null && (
+          <div
+            className="absolute top-0 bottom-0"
+            style={{ left: `${expClamped}%`, width: 2, background: "#F2F1EC", opacity: 0.85 }}
+          />
+        )}
       </div>
-      <div className="text-xs" style={{ color: "#8A8F98" }}>
-        {formatCurrent(current)} de {formatTarget(target)}
+      <div className="text-xs flex items-center justify-between flex-wrap gap-1" style={{ color: "#8A8F98" }}>
+        <span>{formatCurrent(current)} de {formatTarget(target)}</span>
+        {expectedPct !== undefined && (
+          <span>Deberían ir en <span style={{ color: "#F2F1EC", fontWeight: 600 }}>{Math.round(expectedPct)}%</span> ({formatTarget(target * (expectedPct / 100))})</span>
+        )}
       </div>
     </div>
   );
@@ -1668,6 +1700,7 @@ function AsesorView({ onExit }) {
                   current={myUnitsSoldMonth}
                   target={myBudgetUnits}
                   pct={pctUnitsMine}
+                  expectedPct={monthProgressPct()}
                   formatCurrent={(v) => `${v} unidades`}
                   formatTarget={(v) => `${Math.round(v * 10) / 10} unidades`}
                 />
@@ -1678,6 +1711,7 @@ function AsesorView({ onExit }) {
                   current={myDollarsSoldMonth}
                   target={myBudgetDollars}
                   pct={pctDollarsMine}
+                  expectedPct={monthProgressPct()}
                   formatCurrent={(v) => money(v)}
                   formatTarget={(v) => money(v)}
                 />
@@ -3771,6 +3805,7 @@ function AdminView({ onExit }) {
               current={unitsSold}
               target={budgetUnits}
               pct={pctUnits}
+              expectedPct={monthProgressPct()}
               formatCurrent={(v) => `${v} unidades`}
               formatTarget={(v) => `${v} unidades`}
             />
@@ -3779,6 +3814,7 @@ function AdminView({ onExit }) {
               current={dollarsSold}
               target={budgetDollars}
               pct={pctDollars}
+              expectedPct={monthProgressPct()}
               formatCurrent={(v) => money(v)}
               formatTarget={(v) => money(v)}
             />
@@ -3788,6 +3824,9 @@ function AdminView({ onExit }) {
             <div className="mt-4">
               <div className="text-[11px] uppercase tracking-[0.12em] font-medium mb-2" style={{ color: "#8A8F98" }}>
                 Presupuesto individual por asesor
+              </div>
+              <div className="text-[10px] mb-2" style={{ color: "#8A8F98" }}>
+                La línea blanca en cada barra marca en qué % deberían ir, según los días transcurridos del mes ({Math.round(monthProgressPct())}%).
               </div>
               <div className="flex flex-col gap-2">
                 {presupuestoPorAsesor.map((p) => (
@@ -3801,7 +3840,7 @@ function AdminView({ onExit }) {
                           <span style={{ color: "#8A8F98" }}>Unidades</span>
                           <span style={{ color: p.pctUnidades >= 100 ? "#8FD98F" : "#FFC72C" }}>{Math.round(p.pctUnidades)}%</span>
                         </div>
-                        <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: "#2A2E35" }}>
+                        <div className="w-full h-1.5 rounded-full overflow-hidden relative" style={{ background: "#2A2E35" }}>
                           <div
                             className="h-full rounded-full"
                             style={{
@@ -3809,9 +3848,10 @@ function AdminView({ onExit }) {
                               background: p.pctUnidades >= 100 ? "#2E7D32" : p.pctUnidades >= 70 ? "#FFC72C" : "#E4002B",
                             }}
                           />
+                          <div className="absolute top-0 bottom-0" style={{ left: `${Math.min(100, Math.max(0, monthProgressPct()))}%`, width: 2, background: "#F2F1EC", opacity: 0.85 }} />
                         </div>
                         <div className="text-[10px] mt-1" style={{ color: "#8A8F98" }}>
-                          {p.unidades} de {Math.round(p.metaUnidades * 10) / 10}
+                          {p.unidades} de {Math.round(p.metaUnidades * 10) / 10} · deberían ir en {Math.round(p.metaUnidades * (monthProgressPct() / 100) * 10) / 10}
                         </div>
                       </div>
                       <div>
@@ -3819,7 +3859,7 @@ function AdminView({ onExit }) {
                           <span style={{ color: "#8A8F98" }}>Dólares</span>
                           <span style={{ color: p.pctDolares >= 100 ? "#8FD98F" : "#FFC72C" }}>{Math.round(p.pctDolares)}%</span>
                         </div>
-                        <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: "#2A2E35" }}>
+                        <div className="w-full h-1.5 rounded-full overflow-hidden relative" style={{ background: "#2A2E35" }}>
                           <div
                             className="h-full rounded-full"
                             style={{
@@ -3827,9 +3867,10 @@ function AdminView({ onExit }) {
                               background: p.pctDolares >= 100 ? "#2E7D32" : p.pctDolares >= 70 ? "#FFC72C" : "#E4002B",
                             }}
                           />
+                          <div className="absolute top-0 bottom-0" style={{ left: `${Math.min(100, Math.max(0, monthProgressPct()))}%`, width: 2, background: "#F2F1EC", opacity: 0.85 }} />
                         </div>
                         <div className="text-[10px] mt-1" style={{ color: "#8A8F98" }}>
-                          {money(p.dolares)} de {money(p.metaDolares)}
+                          {money(p.dolares)} de {money(p.metaDolares)} · deberían ir en {money(p.metaDolares * (monthProgressPct() / 100))}
                         </div>
                       </div>
                     </div>
@@ -4749,7 +4790,7 @@ function AdminView({ onExit }) {
               <img src={HONDA_LOGO_SRC} alt="Honda" style={{ height: 36, width: "auto" }} />
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
               <div className="rounded-lg p-3" style={{ background: "#FFFFFF", border: "1px solid #DEDCD3" }}>
                 <div className="text-[10px] uppercase tracking-wide" style={{ color: "#545862" }}>Total vendido</div>
                 <div className="font-mono font-bold text-lg" style={{ color: "#14161A" }}>{money(dollarsSold)}</div>
@@ -4763,6 +4804,11 @@ function AdminView({ onExit }) {
                 <div className="font-mono font-bold text-lg" style={{ color: pctDollars >= 100 ? "#2E7D32" : "#E4002B" }}>{budgetDollars > 0 ? `${Math.round(pctDollars)}%` : "—"}</div>
               </div>
               <div className="rounded-lg p-3" style={{ background: "#FFFFFF", border: "1px solid #DEDCD3" }}>
+                <div className="text-[10px] uppercase tracking-wide" style={{ color: "#545862" }}>Deberían ir en</div>
+                <div className="font-mono font-bold text-lg" style={{ color: "#14161A" }}>{budgetDollars > 0 ? `${Math.round(monthProgressPct())}%` : "—"}</div>
+                <div className="text-[10px]" style={{ color: "#545862" }}>{budgetDollars > 0 ? money(budgetDollars * (monthProgressPct() / 100)) : ""}</div>
+              </div>
+              <div className="rounded-lg p-3" style={{ background: "#FFFFFF", border: "1px solid #DEDCD3" }}>
                 <div className="text-[10px] uppercase tracking-wide" style={{ color: "#545862" }}>Días restantes</div>
                 <div className="font-mono font-bold text-lg" style={{ color: "#14161A" }}>{daysLeftInMonth()}</div>
               </div>
@@ -4772,7 +4818,7 @@ function AdminView({ onExit }) {
             <table className="w-full text-xs mb-6" style={{ borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: "#14161A" }}>
-                  {["Asesor", "Ventas", "Total", "Ticket prom.", "% meta", "Cotizados", "Tasa cierre"].map((h) => (
+                  {["Asesor", "Ventas", "Total", "Ticket prom.", "% meta", "Debería ir en", "Cotizados", "Tasa cierre"].map((h) => (
                     <th key={h} className="text-left px-2 py-2" style={{ color: "#F2F1EC" }}>{h}</th>
                   ))}
                 </tr>
@@ -4790,6 +4836,9 @@ function AdminView({ onExit }) {
                       <td className="px-2 py-2 font-mono">{money(ranked ? ranked.ticket : 0)}</td>
                       <td className="px-2 py-2 font-mono font-semibold" style={{ color: presu && presu.pctDolares >= 100 ? "#2E7D32" : "#E4002B" }}>
                         {presu && presu.metaDolares > 0 ? `${Math.round(presu.pctDolares)}%` : "—"}
+                      </td>
+                      <td className="px-2 py-2 font-mono" style={{ color: "#545862" }}>
+                        {presu && presu.metaDolares > 0 ? `${Math.round(monthProgressPct())}% (${money(presu.metaDolares * (monthProgressPct() / 100))})` : "—"}
                       </td>
                       <td className="px-2 py-2">{perf ? perf.cotizaciones : 0}</td>
                       <td className="px-2 py-2 font-mono">{perf && perf.tasaCierre !== null ? `${Math.round(perf.tasaCierre)}%` : "—"}</td>
