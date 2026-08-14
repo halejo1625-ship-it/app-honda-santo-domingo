@@ -254,6 +254,33 @@ async function saveRecordatorios(rows) {
   return saveDoc("recordatorios", rows);
 }
 
+// Aplica un cambio sobre los datos MÁS RECIENTES del servidor (no sobre la copia
+// local que pueda estar desactualizada) — evita que dos personas trabajando al
+// mismo tiempo se borren cambios entre sí.
+async function syncedArrayUpdate({ loadFn, saveFn, mutate, setLocal, setError }) {
+  try {
+    const latest = await loadFn();
+    const updated = mutate(latest);
+    const ok = await saveFn(updated);
+    if (ok) {
+      setLocal(updated);
+      if (setError) setError("");
+      return updated;
+    }
+    if (setError) setError("No se pudo guardar. Revisa tu conexión.");
+    return null;
+  } catch (e) {
+    if (setError) setError("No se pudo guardar. Revisa tu conexión.");
+    return null;
+  }
+}
+// Combina una fila editada localmente con la lista más reciente del servidor,
+// sin pisar filas que otras personas hayan agregado o cambiado mientras tanto.
+function mergeRow(latest, id, localRow) {
+  const exists = latest.some((r) => r.id === id);
+  return exists ? latest.map((r) => (r.id === id ? localRow : r)) : [...latest, localRow];
+}
+
 async function loadCRM() {
   return (await loadDoc("crm-prospectos", [])) || [];
 }
@@ -670,13 +697,6 @@ function RecordatoriosPanel({ mode, personName, recordatorios, setRecordatorios 
       .sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
   }, [recordatorios, personName, mode]);
 
-  const persist = async (updated) => {
-    setRecordatorios(updated);
-    const ok = await saveRecordatorios(updated);
-    if (!ok) setError("No se pudo guardar. Revisa tu conexión.");
-    else setError("");
-  };
-
   // Al abrir la pestaña como asesor, marca como leídos los recordatorios del admin
   useEffect(() => {
     if (mode !== "asesor") return;
@@ -684,10 +704,15 @@ function RecordatoriosPanel({ mode, personName, recordatorios, setRecordatorios 
       (r) => r.destinatario === personName && r.esDeAdmin && !r.leido
     );
     if (pendientesPorLeer.length === 0) return;
-    const updated = recordatorios.map((r) =>
-      r.destinatario === personName && r.esDeAdmin && !r.leido ? { ...r, leido: true } : r
-    );
-    persist(updated);
+    syncedArrayUpdate({
+      loadFn: loadRecordatorios,
+      saveFn: saveRecordatorios,
+      mutate: (latest) =>
+        latest.map((r) =>
+          r.destinatario === personName && r.esDeAdmin && !r.leido ? { ...r, leido: true } : r
+        ),
+      setLocal: setRecordatorios,
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, personName]);
 
@@ -707,15 +732,14 @@ function RecordatoriosPanel({ mode, personName, recordatorios, setRecordatorios 
       completadoFecha: null,
       leido: true,
     };
-    const latest = await loadRecordatorios();
-    const updated = [nuevo, ...latest];
-    const ok = await saveRecordatorios(updated);
-    if (ok) {
-      setRecordatorios(updated);
-      setTexto("");
-    } else {
-      setError("No se pudo guardar. Revisa tu conexión e intenta de nuevo.");
-    }
+    const result = await syncedArrayUpdate({
+      loadFn: loadRecordatorios,
+      saveFn: saveRecordatorios,
+      mutate: (latest) => [nuevo, ...latest],
+      setLocal: setRecordatorios,
+      setError,
+    });
+    if (result) setTexto("");
     setSaving(false);
   };
 
@@ -735,30 +759,39 @@ function RecordatoriosPanel({ mode, personName, recordatorios, setRecordatorios 
       completadoFecha: null,
       leido: false,
     };
-    const latest = await loadRecordatorios();
-    const updated = [nuevo, ...latest];
-    const ok = await saveRecordatorios(updated);
-    if (ok) {
-      setRecordatorios(updated);
-      setTexto("");
-    } else {
-      setError("No se pudo guardar. Revisa tu conexión e intenta de nuevo.");
-    }
+    const result = await syncedArrayUpdate({
+      loadFn: loadRecordatorios,
+      saveFn: saveRecordatorios,
+      mutate: (latest) => [nuevo, ...latest],
+      setLocal: setRecordatorios,
+      setError,
+    });
+    if (result) setTexto("");
     setSaving(false);
   };
 
   const toggleCompletado = async (id) => {
-    const updated = recordatorios.map((r) => {
-      if (r.id !== id) return r;
-      const nowChecked = !r.completado;
-      return { ...r, completado: nowChecked, completadoFecha: nowChecked ? new Date().toISOString() : null };
+    const localItem = recordatorios.find((r) => r.id === id);
+    if (!localItem) return;
+    const nowChecked = !localItem.completado;
+    const updatedItem = { ...localItem, completado: nowChecked, completadoFecha: nowChecked ? new Date().toISOString() : null };
+    await syncedArrayUpdate({
+      loadFn: loadRecordatorios,
+      saveFn: saveRecordatorios,
+      mutate: (latest) => mergeRow(latest, id, updatedItem),
+      setLocal: setRecordatorios,
+      setError,
     });
-    await persist(updated);
   };
 
   const handleDelete = async (id) => {
-    const updated = recordatorios.filter((r) => r.id !== id);
-    await persist(updated);
+    await syncedArrayUpdate({
+      loadFn: loadRecordatorios,
+      saveFn: saveRecordatorios,
+      mutate: (latest) => latest.filter((r) => r.id !== id),
+      setLocal: setRecordatorios,
+      setError,
+    });
   };
 
   const puedeBorrar = (r) =>
@@ -944,13 +977,6 @@ function CRMPanel({ personName, crm, setCrm }) {
       .sort((a, b) => (a.creadoFecha < b.creadoFecha ? 1 : -1));
   }, [misProspectos, filtroModelo, filtroPago]);
 
-  const persist = async (updated) => {
-    setCrm(updated);
-    const ok = await saveCRM(updated);
-    if (!ok) setError("No se pudo guardar. Revisa tu conexión.");
-    else setError("");
-  };
-
   const handleAdd = async () => {
     if (!nombre.trim() || !telefono.trim() || saving) return;
     setSaving(true);
@@ -968,11 +994,14 @@ function CRMPanel({ personName, crm, setCrm }) {
       gestiones: [],
       creadoFecha: new Date().toISOString(),
     };
-    const latest = await loadCRM();
-    const updated = [nuevo, ...latest];
-    const ok = await saveCRM(updated);
-    if (ok) {
-      setCrm(updated);
+    const result = await syncedArrayUpdate({
+      loadFn: loadCRM,
+      saveFn: saveCRM,
+      mutate: (latest) => [nuevo, ...latest],
+      setLocal: setCrm,
+      setError,
+    });
+    if (result) {
       setNombre("");
       setTelefono("");
       setIdentificacion("");
@@ -980,33 +1009,45 @@ function CRMPanel({ personName, crm, setCrm }) {
       setMetodoPago(FORMAS_PAGO[0]);
       setTemperatura("MEDIA");
       setProximaGestion("");
-    } else {
-      setError("No se pudo guardar. Revisa tu conexión e intenta de nuevo.");
     }
     setSaving(false);
   };
 
   const handleDelete = async (id) => {
-    await persist(crm.filter((p) => p.id !== id));
+    await syncedArrayUpdate({
+      loadFn: loadCRM,
+      saveFn: saveCRM,
+      mutate: (latest) => latest.filter((p) => p.id !== id),
+      setLocal: setCrm,
+      setError,
+    });
   };
 
   const handleAddComentario = async (id) => {
     const texto = (comentarioTexto[id] || "").trim();
     if (!texto) return;
-    const updated = crm.map((p) => {
-      if (p.id !== id) return p;
-      const gestion = { id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, texto, fecha: new Date().toISOString() };
-      return { ...p, gestiones: [...(p.gestiones || []), gestion] };
+    const gestion = { id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, texto, fecha: new Date().toISOString() };
+    await syncedArrayUpdate({
+      loadFn: loadCRM,
+      saveFn: saveCRM,
+      mutate: (latest) =>
+        latest.map((p) => (p.id === id ? { ...p, gestiones: [...(p.gestiones || []), gestion] } : p)),
+      setLocal: setCrm,
+      setError,
     });
-    await persist(updated);
     setComentarioTexto((prev) => ({ ...prev, [id]: "" }));
   };
 
   const handleUpdateProxima = async (id) => {
     const nuevaFecha = proximaEdit[id];
     if (nuevaFecha === undefined) return;
-    const updated = crm.map((p) => (p.id === id ? { ...p, proximaGestion: nuevaFecha || null } : p));
-    await persist(updated);
+    await syncedArrayUpdate({
+      loadFn: loadCRM,
+      saveFn: saveCRM,
+      mutate: (latest) => latest.map((p) => (p.id === id ? { ...p, proximaGestion: nuevaFecha || null } : p)),
+      setLocal: setCrm,
+      setError,
+    });
   };
 
   const hoy = todayISO();
@@ -1315,13 +1356,6 @@ function AsesorView({ onExit }) {
     return proyecciones.filter((p) => p.asesor.trim().toLowerCase() === norm);
   }, [proyecciones, name]);
 
-  const persistProyecciones = async (updated) => {
-    setProyecciones(updated);
-    const ok = await saveProyecciones(updated);
-    if (!ok) setProyeccionError("No se pudo guardar. Revisa tu conexión.");
-    else setProyeccionError("");
-  };
-
   const addProyeccion = async () => {
     const row = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -1334,21 +1368,39 @@ function AsesorView({ onExit }) {
       valor: 0,
       fecha: todayISO(),
     };
-    await persistProyecciones([...proyecciones, row]);
+    await syncedArrayUpdate({
+      loadFn: loadProyecciones,
+      saveFn: saveProyecciones,
+      mutate: (latest) => [...latest, row],
+      setLocal: setProyecciones,
+      setError: setProyeccionError,
+    });
   };
 
   const updateProyeccion = (id, field, value) => {
     setProyecciones((prev) => prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)));
   };
 
-  const commitProyeccion = async () => {
-    const ok = await saveProyecciones(proyecciones);
-    if (!ok) setProyeccionError("No se pudo guardar. Revisa tu conexión.");
-    else setProyeccionError("");
+  const commitProyeccion = async (id) => {
+    const localRow = proyecciones.find((p) => p.id === id);
+    if (!localRow) return;
+    await syncedArrayUpdate({
+      loadFn: loadProyecciones,
+      saveFn: saveProyecciones,
+      mutate: (latest) => mergeRow(latest, id, localRow),
+      setLocal: setProyecciones,
+      setError: setProyeccionError,
+    });
   };
 
   const deleteProyeccion = async (id) => {
-    await persistProyecciones(proyecciones.filter((p) => p.id !== id));
+    await syncedArrayUpdate({
+      loadFn: loadProyecciones,
+      saveFn: saveProyecciones,
+      mutate: (latest) => latest.filter((p) => p.id !== id),
+      setLocal: setProyecciones,
+      setError: setProyeccionError,
+    });
   };
 
   const totalProyecciones = myProyecciones.reduce((sum, p) => sum + (Number(p.valor) || 0) / 1.15, 0);
@@ -1413,28 +1465,34 @@ function AsesorView({ onExit }) {
   };
 
   const deleteSale = async (id) => {
-    const updated = sales.filter((s) => s.id !== id);
-    const ok = await saveSales(updated);
-    if (ok) setSales(updated);
+    await syncedArrayUpdate({
+      loadFn: loadSales,
+      saveFn: saveSales,
+      mutate: (latest) => latest.filter((s) => s.id !== id),
+      setLocal: setSales,
+    });
   };
 
   const toggleEntregaPaso = async (saleId, paso) => {
-    const updated = sales.map((s) => {
-      if (s.id !== saleId) return s;
-      const entrega = { ...(s.entrega || {}) };
-      const wasChecked = !!entrega[paso.key];
-      entrega[paso.key] = !wasChecked;
-      if (paso.auto) {
-        if (!wasChecked) {
-          entrega[`${paso.key}Fecha`] = new Date().toISOString();
-        } else {
-          delete entrega[`${paso.key}Fecha`];
-        }
+    const localSale = sales.find((s) => s.id === saleId);
+    if (!localSale) return;
+    const entrega = { ...(localSale.entrega || {}) };
+    const wasChecked = !!entrega[paso.key];
+    entrega[paso.key] = !wasChecked;
+    if (paso.auto) {
+      if (!wasChecked) {
+        entrega[`${paso.key}Fecha`] = new Date().toISOString();
+      } else {
+        delete entrega[`${paso.key}Fecha`];
       }
-      return { ...s, entrega };
+    }
+    const updatedSale = { ...localSale, entrega };
+    await syncedArrayUpdate({
+      loadFn: loadSales,
+      saveFn: saveSales,
+      mutate: (latest) => mergeRow(latest, saleId, updatedSale),
+      setLocal: setSales,
     });
-    setSales(updated);
-    await saveSales(updated);
   };
 
   const handleLogout = async () => {
@@ -1882,7 +1940,7 @@ function AsesorView({ onExit }) {
                       <input
                         value={p.cliente}
                         onChange={(e) => updateProyeccion(p.id, "cliente", e.target.value)}
-                        onBlur={commitProyeccion}
+                        onBlur={() => commitProyeccion(p.id)}
                         placeholder="Nombre completo"
                         className="rounded px-1.5 py-1.5 outline-none text-xs"
                         style={{ background: "transparent", border: "none", color: "#F2F1EC", width: "100%" }}
@@ -1892,7 +1950,7 @@ function AsesorView({ onExit }) {
                       <input
                         value={p.identificacion || ""}
                         onChange={(e) => updateProyeccion(p.id, "identificacion", e.target.value)}
-                        onBlur={commitProyeccion}
+                        onBlur={() => commitProyeccion(p.id)}
                         placeholder="Cédula/RUC"
                         className="rounded px-1.5 py-1.5 outline-none text-xs"
                         style={{ background: "transparent", border: "none", color: "#F2F1EC", width: "100%" }}
@@ -1902,7 +1960,7 @@ function AsesorView({ onExit }) {
                       <input
                         value={p.modelo}
                         onChange={(e) => updateProyeccion(p.id, "modelo", e.target.value)}
-                        onBlur={commitProyeccion}
+                        onBlur={() => commitProyeccion(p.id)}
                         placeholder="Ej. Honda CB 190R"
                         className="rounded px-1.5 py-1.5 outline-none text-xs"
                         style={{ background: "transparent", border: "none", color: "#F2F1EC", width: "100%" }}
@@ -1912,7 +1970,7 @@ function AsesorView({ onExit }) {
                       <select
                         value={p.formaPago}
                         onChange={(e) => updateProyeccion(p.id, "formaPago", e.target.value)}
-                        onBlur={commitProyeccion}
+                        onBlur={() => commitProyeccion(p.id)}
                         className="rounded px-1.5 py-1.5 outline-none text-xs"
                         style={{ background: "transparent", border: "none", color: "#F2F1EC", width: "100%" }}
                       >
@@ -1925,7 +1983,7 @@ function AsesorView({ onExit }) {
                       <input
                         value={p.estado}
                         onChange={(e) => updateProyeccion(p.id, "estado", e.target.value)}
-                        onBlur={commitProyeccion}
+                        onBlur={() => commitProyeccion(p.id)}
                         placeholder="Ej. Esperando aprobación de crédito"
                         className="rounded px-1.5 py-1.5 outline-none text-xs"
                         style={{ background: "transparent", border: "none", color: "#F2F1EC", width: "100%" }}
@@ -1937,7 +1995,7 @@ function AsesorView({ onExit }) {
                         step="0.01"
                         value={p.valor}
                         onChange={(e) => updateProyeccion(p.id, "valor", e.target.value)}
-                        onBlur={commitProyeccion}
+                        onBlur={() => commitProyeccion(p.id)}
                         className="rounded px-1.5 py-1.5 outline-none text-xs text-right"
                         style={{ background: "transparent", border: "none", color: "#FFC72C", width: "100%" }}
                       />
@@ -2096,13 +2154,6 @@ function CajeraView({ onExit }) {
     [entries, selectedDate]
   );
 
-  const persist = async (updated) => {
-    setEntries(updated);
-    const ok = await saveCajaEntries(updated);
-    if (!ok) setSaveError("No se pudo guardar. Revisa tu conexión.");
-    else setSaveError("");
-  };
-
   const addRow = async () => {
     const row = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -2115,7 +2166,13 @@ function CajeraView({ onExit }) {
       revisado: false,
       cajera: name,
     };
-    await persist([...entries, row]);
+    await syncedArrayUpdate({
+      loadFn: loadCajaEntries,
+      saveFn: saveCajaEntries,
+      mutate: (latest) => [...latest, row],
+      setLocal: setEntries,
+      setError: setSaveError,
+    });
   };
 
   const updateRow = (id, field, value) => {
@@ -2124,32 +2181,46 @@ function CajeraView({ onExit }) {
 
   const commitRow = async (id) => {
     setSavingId(id);
-    const ok = await saveCajaEntries(entries);
-    if (!ok) setSaveError("No se pudo guardar. Revisa tu conexión.");
-    else setSaveError("");
+    const localRow = entries.find((e) => e.id === id);
+    if (localRow) {
+      await syncedArrayUpdate({
+        loadFn: loadCajaEntries,
+        saveFn: saveCajaEntries,
+        mutate: (latest) => mergeRow(latest, id, localRow),
+        setLocal: setEntries,
+        setError: setSaveError,
+      });
+    }
     setSavingId(null);
   };
 
   const toggleCheck = async (id, field) => {
-    const updated = entries.map((e) => (e.id === id ? { ...e, [field]: !e[field] } : e));
-    await persist(updated);
+    const localRow = entries.find((e) => e.id === id);
+    if (!localRow) return;
+    const updatedRow = { ...localRow, [field]: !localRow[field] };
+    await syncedArrayUpdate({
+      loadFn: loadCajaEntries,
+      saveFn: saveCajaEntries,
+      mutate: (latest) => mergeRow(latest, id, updatedRow),
+      setLocal: setEntries,
+      setError: setSaveError,
+    });
   };
 
   const deleteRow = async (id) => {
-    await persist(entries.filter((e) => e.id !== id));
+    await syncedArrayUpdate({
+      loadFn: loadCajaEntries,
+      saveFn: saveCajaEntries,
+      mutate: (latest) => latest.filter((e) => e.id !== id),
+      setLocal: setEntries,
+      setError: setSaveError,
+    });
   };
 
   const dayTransfers = useMemo(
     () => transferencias.filter((t) => t.fecha === selectedDate),
     [transferencias, selectedDate]
   );
-
-  const persistTransfers = async (updated) => {
-    setTransferencias(updated);
-    const ok = await saveTransferencias(updated);
-    if (!ok) setTransferError("No se pudo guardar. Revisa tu conexión.");
-    else setTransferError("");
-  };
 
   const addTransfer = async () => {
     const row = {
@@ -2158,21 +2229,39 @@ function CajeraView({ onExit }) {
       valor: 0,
       cajera: name,
     };
-    await persistTransfers([...transferencias, row]);
+    await syncedArrayUpdate({
+      loadFn: loadTransferencias,
+      saveFn: saveTransferencias,
+      mutate: (latest) => [...latest, row],
+      setLocal: setTransferencias,
+      setError: setTransferError,
+    });
   };
 
   const updateTransfer = (id, value) => {
     setTransferencias((prev) => prev.map((t) => (t.id === id ? { ...t, valor: value } : t)));
   };
 
-  const commitTransfer = async () => {
-    const ok = await saveTransferencias(transferencias);
-    if (!ok) setTransferError("No se pudo guardar. Revisa tu conexión.");
-    else setTransferError("");
+  const commitTransfer = async (id) => {
+    const localRow = transferencias.find((t) => t.id === id);
+    if (!localRow) return;
+    await syncedArrayUpdate({
+      loadFn: loadTransferencias,
+      saveFn: saveTransferencias,
+      mutate: (latest) => mergeRow(latest, id, localRow),
+      setLocal: setTransferencias,
+      setError: setTransferError,
+    });
   };
 
   const deleteTransfer = async (id) => {
-    await persistTransfers(transferencias.filter((t) => t.id !== id));
+    await syncedArrayUpdate({
+      loadFn: loadTransferencias,
+      saveFn: saveTransferencias,
+      mutate: (latest) => latest.filter((t) => t.id !== id),
+      setLocal: setTransferencias,
+      setError: setTransferError,
+    });
   };
 
   const totalTransferencias = dayTransfers.reduce((sum, t) => sum + (Number(t.valor) || 0), 0);
@@ -2192,13 +2281,6 @@ function CajeraView({ onExit }) {
     [egresos, selectedDate]
   );
 
-  const persistEgresos = async (updated) => {
-    setEgresos(updated);
-    const ok = await saveEgresos(updated);
-    if (!ok) setEgresoError("No se pudo guardar. Revisa tu conexión.");
-    else setEgresoError("");
-  };
-
   const addEgreso = async () => {
     const row = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -2207,21 +2289,39 @@ function CajeraView({ onExit }) {
       motivo: "",
       cajera: name,
     };
-    await persistEgresos([...egresos, row]);
+    await syncedArrayUpdate({
+      loadFn: loadEgresos,
+      saveFn: saveEgresos,
+      mutate: (latest) => [...latest, row],
+      setLocal: setEgresos,
+      setError: setEgresoError,
+    });
   };
 
   const updateEgreso = (id, field, value) => {
     setEgresos((prev) => prev.map((g) => (g.id === id ? { ...g, [field]: value } : g)));
   };
 
-  const commitEgreso = async () => {
-    const ok = await saveEgresos(egresos);
-    if (!ok) setEgresoError("No se pudo guardar. Revisa tu conexión.");
-    else setEgresoError("");
+  const commitEgreso = async (id) => {
+    const localRow = egresos.find((g) => g.id === id);
+    if (!localRow) return;
+    await syncedArrayUpdate({
+      loadFn: loadEgresos,
+      saveFn: saveEgresos,
+      mutate: (latest) => mergeRow(latest, id, localRow),
+      setLocal: setEgresos,
+      setError: setEgresoError,
+    });
   };
 
   const deleteEgreso = async (id) => {
-    await persistEgresos(egresos.filter((g) => g.id !== id));
+    await syncedArrayUpdate({
+      loadFn: loadEgresos,
+      saveFn: saveEgresos,
+      mutate: (latest) => latest.filter((g) => g.id !== id),
+      setLocal: setEgresos,
+      setError: setEgresoError,
+    });
   };
 
   const totalEgresos = dayEgresos.reduce((sum, g) => sum + (Number(g.valor) || 0), 0);
@@ -2528,7 +2628,7 @@ function CajeraView({ onExit }) {
                         step="0.01"
                         value={t.valor}
                         onChange={(ev) => updateTransfer(t.id, ev.target.value)}
-                        onBlur={commitTransfer}
+                        onBlur={() => commitTransfer(t.id)}
                         className="rounded px-1.5 py-1.5 outline-none text-xs text-right"
                         style={{ background: "transparent", border: "none", color: "#F2F1EC", width: "100%" }}
                       />
@@ -2600,7 +2700,7 @@ function CajeraView({ onExit }) {
                         step="0.01"
                         value={g.valor}
                         onChange={(ev) => updateEgreso(g.id, "valor", ev.target.value)}
-                        onBlur={commitEgreso}
+                        onBlur={() => commitEgreso(g.id)}
                         className="rounded px-1.5 py-1.5 outline-none text-xs text-right"
                         style={{ background: "transparent", border: "none", color: "#FFC72C", width: "100%" }}
                       />
@@ -2609,7 +2709,7 @@ function CajeraView({ onExit }) {
                       <input
                         value={g.motivo}
                         onChange={(ev) => updateEgreso(g.id, "motivo", ev.target.value)}
-                        onBlur={commitEgreso}
+                        onBlur={() => commitEgreso(g.id)}
                         placeholder="Ej. Compra de suministros"
                         className="rounded px-1.5 py-1.5 outline-none text-xs"
                         style={{ background: "transparent", border: "none", color: "#F2F1EC", width: "100%" }}
