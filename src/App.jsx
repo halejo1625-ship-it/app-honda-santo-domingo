@@ -2235,10 +2235,9 @@ function CajeraView({ onExit }) {
     { valor: 0, portcoll: 0 }
   );
 
-  const totalContado = [...BILLETES, ...MONEDAS].reduce((sum, d) => {
-    const qty = Number(conteo[d]) || 0;
-    return sum + qty * d;
-  }, 0);
+  const totalContado =
+    BILLETES.reduce((sum, d) => sum + (Number(conteo[`b-${d}`]) || 0) * d, 0) +
+    MONEDAS.reduce((sum, d) => sum + (Number(conteo[`m-${d}`]) || 0) * d, 0);
   const efectivoEsperado = dayTotals.valor + dayTotals.portcoll - totalEgresos;
 
   const cobrarNum = parseMoneyInput(cobrar);
@@ -2674,15 +2673,15 @@ function CajeraView({ onExit }) {
                       <input
                         type="number"
                         min="0"
-                        value={conteo[d] ?? ""}
-                        onChange={(e) => updateConteo(d, e.target.value)}
+                        value={conteo[`b-${d}`] ?? ""}
+                        onChange={(e) => updateConteo(`b-${d}`, e.target.value)}
                         onBlur={() => commitConteo()}
                         placeholder="0"
                         className="rounded px-2 py-1.5 text-xs text-center outline-none"
                         style={{ ...inputStyle, width: 60 }}
                       />
                       <span className="text-xs font-mono flex-1 text-right" style={{ color: "#8A8F98" }}>
-                        {moneyExact((Number(conteo[d]) || 0) * d)}
+                        {moneyExact((Number(conteo[`b-${d}`]) || 0) * d)}
                       </span>
                     </div>
                   ))}
@@ -2699,15 +2698,15 @@ function CajeraView({ onExit }) {
                       <input
                         type="number"
                         min="0"
-                        value={conteo[d] ?? ""}
-                        onChange={(e) => updateConteo(d, e.target.value)}
+                        value={conteo[`m-${d}`] ?? ""}
+                        onChange={(e) => updateConteo(`m-${d}`, e.target.value)}
                         onBlur={() => commitConteo()}
                         placeholder="0"
                         className="rounded px-2 py-1.5 text-xs text-center outline-none"
                         style={{ ...inputStyle, width: 60 }}
                       />
                       <span className="text-xs font-mono flex-1 text-right" style={{ color: "#8A8F98" }}>
-                        {moneyExact((Number(conteo[d]) || 0) * d)}
+                        {moneyExact((Number(conteo[`m-${d}`]) || 0) * d)}
                       </span>
                     </div>
                   ))}
@@ -3086,7 +3085,7 @@ function AdminView({ onExit }) {
     });
     return Object.values(map)
       .map((a) => ({ ...a, ticket: a.total / a.count }))
-      .sort((a, b) => b.ticket - a.ticket);
+      .sort((a, b) => b.total - a.total);
   }, [salesInPeriod]);
 
   const totalGlobal = salesInPeriod.reduce((sum, s) => sum + s.valor, 0);
@@ -3170,6 +3169,35 @@ function AdminView({ onExit }) {
     });
     return map;
   }, [monthSales]);
+
+  const monthSalesDollarsByAsesorKey = useMemo(() => {
+    const map = {};
+    monthSales.forEach((s) => {
+      const key = normalizeKey(s.asesor) || "sin nombre";
+      map[key] = (map[key] || 0) + s.valor / 1.15;
+    });
+    return map;
+  }, [monthSales]);
+
+  const presupuestoPorAsesor = useMemo(() => {
+    const numAsesores = ASESORES.length || 1;
+    const metaUnidades = budgetUnits / numAsesores;
+    const metaDolares = budgetDollars / numAsesores;
+    return ASESORES.map((a) => {
+      const key = normalizeKey(a.nombre);
+      const unidades = monthSalesCountByAsesorKey[key] || 0;
+      const dolares = monthSalesDollarsByAsesorKey[key] || 0;
+      return {
+        asesor: a.nombre,
+        unidades,
+        metaUnidades,
+        pctUnidades: metaUnidades > 0 ? (unidades / metaUnidades) * 100 : 0,
+        dolares,
+        metaDolares,
+        pctDolares: metaDolares > 0 ? (dolares / metaDolares) * 100 : 0,
+      };
+    });
+  }, [monthSalesCountByAsesorKey, monthSalesDollarsByAsesorKey, budgetUnits, budgetDollars]);
 
   const asesorPerformance = useMemo(() => {
     const namesSet = new Set([
@@ -3556,6 +3584,61 @@ function AdminView({ onExit }) {
               formatTarget={(v) => money(v)}
             />
           </div>
+
+          {(budgetUnits > 0 || budgetDollars > 0) && (
+            <div className="mt-4">
+              <div className="text-[11px] uppercase tracking-[0.12em] font-medium mb-2" style={{ color: "#8A8F98" }}>
+                Presupuesto individual por asesor
+              </div>
+              <div className="flex flex-col gap-2">
+                {presupuestoPorAsesor.map((p) => (
+                  <div key={p.asesor} className="rounded-lg px-4 py-3" style={{ background: "#14161A", border: "1px solid #2A2E35" }}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium" style={{ color: "#F2F1EC" }}>{p.asesor}</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <div className="flex items-center justify-between text-[11px] mb-1">
+                          <span style={{ color: "#8A8F98" }}>Unidades</span>
+                          <span style={{ color: p.pctUnidades >= 100 ? "#8FD98F" : "#FFC72C" }}>{Math.round(p.pctUnidades)}%</span>
+                        </div>
+                        <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: "#2A2E35" }}>
+                          <div
+                            className="h-full rounded-full"
+                            style={{
+                              width: `${Math.min(100, Math.max(0, p.pctUnidades))}%`,
+                              background: p.pctUnidades >= 100 ? "#2E7D32" : p.pctUnidades >= 70 ? "#FFC72C" : "#E4002B",
+                            }}
+                          />
+                        </div>
+                        <div className="text-[10px] mt-1" style={{ color: "#8A8F98" }}>
+                          {p.unidades} de {Math.round(p.metaUnidades * 10) / 10}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="flex items-center justify-between text-[11px] mb-1">
+                          <span style={{ color: "#8A8F98" }}>Dólares</span>
+                          <span style={{ color: p.pctDolares >= 100 ? "#8FD98F" : "#FFC72C" }}>{Math.round(p.pctDolares)}%</span>
+                        </div>
+                        <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: "#2A2E35" }}>
+                          <div
+                            className="h-full rounded-full"
+                            style={{
+                              width: `${Math.min(100, Math.max(0, p.pctDolares))}%`,
+                              background: p.pctDolares >= 100 ? "#2E7D32" : p.pctDolares >= 70 ? "#FFC72C" : "#E4002B",
+                            }}
+                          />
+                        </div>
+                        <div className="text-[10px] mt-1" style={{ color: "#8A8F98" }}>
+                          {money(p.dolares)} de {money(p.metaDolares)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -3578,7 +3661,7 @@ function AdminView({ onExit }) {
         {byAsesor.length > 0 && (
           <div>
             <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-3" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
-              Ranking · ticket promedio por asesor · {periodLabel}
+              Ranking · ventas por asesor · {periodLabel}
             </div>
             <div className="rounded-lg p-4" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
               <ResponsiveContainer width="100%" height={Math.max(160, byAsesor.length * 42)}>
@@ -3591,7 +3674,7 @@ function AdminView({ onExit }) {
                     contentStyle={{ background: "#1E2126", border: "1px solid #2A2E35", borderRadius: 6, color: "#F2F1EC" }}
                     labelStyle={{ color: "#F2F1EC" }}
                   />
-                  <Bar dataKey="ticket" radius={[0, 4, 4, 0]}>
+                  <Bar dataKey="total" radius={[0, 4, 4, 0]}>
                     {byAsesor.map((_, i) => (
                       <Cell key={i} fill={i === 0 ? "#FFC72C" : "#E4002B"} />
                     ))}
@@ -3611,8 +3694,8 @@ function AdminView({ onExit }) {
                     <span className="text-xs" style={{ color: "#8A8F98" }}>{a.count} ventas</span>
                   </div>
                   <div className="flex items-center gap-4">
-                    <span className="text-xs" style={{ color: "#8A8F98" }}>{money(a.total)} total</span>
-                    <span className="font-mono font-semibold text-sm" style={{ color: "#FFC72C" }}>{money(a.ticket)}</span>
+                    <span className="font-mono font-semibold text-sm" style={{ color: "#FFC72C" }}>{money(a.total)}</span>
+                    <span className="text-xs" style={{ color: "#8A8F98" }}>{money(a.ticket)} ticket prom.</span>
                   </div>
                 </div>
               ))}
@@ -3768,7 +3851,7 @@ function AdminView({ onExit }) {
 
           {quotes.length > 0 && (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
                 <div className="rounded-lg p-4 flex flex-col justify-center gap-1" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
                   <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#8A8F98" }}>Tasa de cierre global</span>
                   <span className="font-mono font-semibold text-2xl" style={{ color: "#FFC72C" }}>
@@ -3776,6 +3859,15 @@ function AdminView({ onExit }) {
                   </span>
                   <span className="text-xs mt-1" style={{ color: "#8A8F98" }}>
                     {monthSales.length} ventas / {totalQuotesMonth} cotizados
+                  </span>
+                </div>
+                <div className="rounded-lg p-4 flex flex-col justify-center gap-1" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+                  <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#8A8F98" }}>Clientes por venta</span>
+                  <span className="font-mono font-semibold text-2xl" style={{ color: "#F2F1EC" }}>
+                    {tasaCierreGlobal === null || tasaCierreGlobal === 0 ? "—" : (100 / tasaCierreGlobal).toFixed(1)}
+                  </span>
+                  <span className="text-xs mt-1" style={{ color: "#8A8F98" }}>
+                    clientes atendidos, en promedio, por cada moto vendida
                   </span>
                 </div>
                 <div className="rounded-lg p-4" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
@@ -3801,6 +3893,9 @@ function AdminView({ onExit }) {
                       <span className="font-mono font-semibold" style={{ color: a.tasaCierre === null ? "#8A8F98" : "#FFC72C" }}>
                         {a.tasaCierre === null ? "Sin cotizados" : `${Math.round(a.tasaCierre)}% cierre`}
                       </span>
+                      <span className="font-mono" style={{ color: "#8A8F98" }}>
+                        {a.tasaCierre === null || a.tasaCierre === 0 ? "—" : `${(100 / a.tasaCierre).toFixed(1)} clientes/venta`}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -3822,22 +3917,40 @@ function AdminView({ onExit }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {ASESORES.map((a, i) => {
+                      {ASESORES.map((a) => {
                         const row = quotesMatrix[a.nombre] || {};
                         const total = canalNames.reduce((sum, c) => sum + (row[c] || 0), 0);
-                        return (
+                        return { nombre: a.nombre, row, total };
+                      })
+                        .sort((a, b) => b.total - a.total)
+                        .map((a, i) => (
                           <tr key={a.nombre} style={{ background: i % 2 ? "#1a1d22" : "#1E2126", color: "#F2F1EC" }}>
                             <td className="px-3 py-2.5 whitespace-nowrap font-medium">{a.nombre}</td>
                             {canalNames.map((c) => (
-                              <td key={c} className="px-3 py-2.5 text-right font-mono" style={{ color: row[c] ? "#F2F1EC" : "#4A4E56" }}>
-                                {row[c] || 0}
+                              <td key={c} className="px-3 py-2.5 text-right font-mono" style={{ color: a.row[c] ? "#F2F1EC" : "#4A4E56" }}>
+                                {a.row[c] || 0}
                               </td>
                             ))}
-                            <td className="px-3 py-2.5 text-right font-mono font-semibold" style={{ color: "#FFC72C" }}>{total}</td>
+                            <td className="px-3 py-2.5 text-right font-mono font-semibold" style={{ color: "#FFC72C" }}>{a.total}</td>
                           </tr>
-                        );
-                      })}
+                        ))}
                     </tbody>
+                    <tfoot>
+                      <tr style={{ background: "#14161A", borderTop: "1px solid #2A2E35" }}>
+                        <td className="px-3 py-2.5 whitespace-nowrap font-semibold" style={{ color: "#8A8F98" }}>Total</td>
+                        {canalNames.map((c) => {
+                          const colTotal = ASESORES.reduce((sum, a) => sum + ((quotesMatrix[a.nombre] || {})[c] || 0), 0);
+                          return (
+                            <td key={c} className="px-3 py-2.5 text-right font-mono font-semibold" style={{ color: "#F2F1EC" }}>
+                              {colTotal}
+                            </td>
+                          );
+                        })}
+                        <td className="px-3 py-2.5 text-right font-mono font-bold" style={{ color: "#FFC72C" }}>
+                          {ASESORES.reduce((sum, a) => sum + canalNames.reduce((s2, c) => s2 + ((quotesMatrix[a.nombre] || {})[c] || 0), 0), 0)}
+                        </td>
+                      </tr>
+                    </tfoot>
                   </table>
                 </div>
               </div>
