@@ -3431,6 +3431,56 @@ function AdminView({ onExit }) {
     [crm]
   );
 
+  const recomendaciones = useMemo(() => {
+    const recs = [];
+    const diasRestantes = daysLeftInMonth();
+    const faltaDolares = Math.max(0, budgetDollars - dollarsSold);
+
+    if (budgetDollars > 0) {
+      if (pctDollars >= 100) {
+        recs.push({ tipo: "positivo", texto: `El equipo ya superó la meta de dólares del mes (${Math.round(pctDollars)}%). Buen momento para consolidar el cierre y preparar el siguiente mes.` });
+      } else if (diasRestantes <= 7) {
+        recs.push({ tipo: "alerta", texto: `Quedan ${diasRestantes} ${diasRestantes === 1 ? "día" : "días"} para cerrar el mes y falta ${money(faltaDolares)} para llegar a la meta. Prioricen los prospectos de temperatura ALTA en el CRM y las proyecciones más avanzadas.` });
+      } else if (pctDollars < 60) {
+        recs.push({ tipo: "alerta", texto: `El equipo va en ${Math.round(pctDollars)}% de la meta de dólares, con ${diasRestantes} días restantes. Conviene revisar el ritmo diario de cotizaciones y seguimiento.` });
+      } else {
+        recs.push({ tipo: "info", texto: `El equipo va en ${Math.round(pctDollars)}% de la meta de dólares, con ${diasRestantes} días restantes — a buen ritmo, mantener el enfoque.` });
+      }
+    } else {
+      recs.push({ tipo: "info", texto: "No hay presupuesto configurado todavía para este mes — cárgalo en la pestaña Ventas para habilitar más recomendaciones automáticas." });
+    }
+
+    if (tasaCierreGlobal !== null) {
+      if (tasaCierreGlobal < 15) {
+        recs.push({ tipo: "alerta", texto: `La tasa de cierre global es de ${Math.round(tasaCierreGlobal)}% (cerca de ${(100 / tasaCierreGlobal).toFixed(1)} clientes atendidos por cada venta). Antes de buscar más cotizados, conviene reforzar el cierre: manejo de objeciones y seguimiento oportuno.` });
+      } else if (tasaCierreGlobal >= 30) {
+        recs.push({ tipo: "positivo", texto: `Buena tasa de cierre (${Math.round(tasaCierreGlobal)}%). El cuello de botella para crecer está más en la cantidad de cotizados que en el cierre en sí.` });
+      }
+    }
+
+    if (crmVencidas > 0) {
+      recs.push({ tipo: "alerta", texto: `Hay ${crmVencidas} ${crmVencidas === 1 ? "gestión vencida" : "gestiones vencidas"} en el CRM sin dar seguimiento. Revisarlas hoy mismo puede traducirse en ventas rápidas.` });
+    }
+
+    if (totalProyeccionesGlobal > 0 && faltaDolares > 0) {
+      if (totalProyeccionesGlobal >= faltaDolares) {
+        recs.push({ tipo: "positivo", texto: `Las proyecciones activas del equipo (${money(totalProyeccionesGlobal)}) alcanzarían para cubrir lo que falta de la meta (${money(faltaDolares)}) — el foco debe ser cerrar lo que ya está en proceso, no solo buscar clientes nuevos.` });
+      } else {
+        recs.push({ tipo: "alerta", texto: `Las proyecciones activas (${money(totalProyeccionesGlobal)}) no alcanzan a cubrir lo que falta de la meta (${money(faltaDolares)}). Es necesario generar nuevos prospectos, no solo cerrar los actuales.` });
+      }
+    }
+
+    presupuestoPorAsesor.forEach((p) => {
+      if (p.metaDolares > 0 && p.pctDolares < 40) {
+        recs.push({ tipo: "individual", texto: `${p.asesor} va en ${Math.round(p.pctDolares)}% de su meta individual — conviene una conversación de acompañamiento esta semana.` });
+      } else if (p.metaDolares > 0 && p.pctDolares >= 100) {
+        recs.push({ tipo: "positivo", texto: `${p.asesor} ya cumplió su meta individual del mes (${Math.round(p.pctDolares)}%). Reconocerlo en la reunión ayuda a mantener el ritmo.` });
+      }
+    });
+
+    return recs;
+  }, [budgetDollars, dollarsSold, pctDollars, tasaCierreGlobal, crmVencidas, totalProyeccionesGlobal, presupuestoPorAsesor]);
+
   const exportProyeccionesExcel = () => {
     const rows = proyecciones.map((p) => ({
       Asesor: p.asesor,
@@ -3638,6 +3688,19 @@ function AdminView({ onExit }) {
             }}
           >
             CRM
+          </button>
+          <button
+            type="button"
+            onClick={() => setAdminTab("reunion")}
+            className="flex-1 min-w-[130px] rounded-lg py-3 font-semibold uppercase text-xs tracking-[0.1em] transition-colors"
+            style={{
+              fontFamily: "'Oswald',sans-serif",
+              background: adminTab === "reunion" ? "#E4002B" : "#1E2126",
+              color: adminTab === "reunion" ? "#F2F1EC" : "#8A8F98",
+              border: `1px solid ${adminTab === "reunion" ? "#E4002B" : "#2A2E35"}`,
+            }}
+          >
+            Reunión
           </button>
         </div>
 
@@ -4650,6 +4713,135 @@ function AdminView({ onExit }) {
           )}
         </div>
         )}
+
+        {adminTab === "reunion" && (
+        <div>
+          <div className="flex items-center justify-between mb-4 no-print">
+            <div>
+              <div className="font-semibold uppercase text-xs tracking-[0.12em]" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
+                Reunión de avance con asesores
+              </div>
+              <div className="text-[11px] mt-1" style={{ color: "#8A8F98" }}>
+                Reporte listo para imprimir o guardar como PDF y usar en la reunión.
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="flex items-center gap-2 rounded-md px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.08em] shrink-0"
+              style={{ background: "#E4002B", color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}
+            >
+              <Download size={14} />
+              Imprimir / Guardar PDF
+            </button>
+          </div>
+
+          <div id="printable-reunion" className="rounded-lg p-6 sm:p-8" style={{ background: "#F2F1EC", color: "#14161A" }}>
+            <div className="flex items-center justify-between mb-6 pb-4" style={{ borderBottom: "3px solid #E4002B" }}>
+              <div>
+                <div className="font-bold uppercase text-xl" style={{ fontFamily: "'Oswald',sans-serif", color: "#14161A" }}>
+                  Reunión de avance — {periodLabel}
+                </div>
+                <div className="text-xs mt-1" style={{ color: "#545862" }}>
+                  Honda Santo Domingo · Generado el {new Date().toLocaleDateString("es-EC", { day: "2-digit", month: "long", year: "numeric" })}
+                </div>
+              </div>
+              <img src={HONDA_LOGO_SRC} alt="Honda" style={{ height: 36, width: "auto" }} />
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+              <div className="rounded-lg p-3" style={{ background: "#FFFFFF", border: "1px solid #DEDCD3" }}>
+                <div className="text-[10px] uppercase tracking-wide" style={{ color: "#545862" }}>Total vendido</div>
+                <div className="font-mono font-bold text-lg" style={{ color: "#14161A" }}>{money(dollarsSold)}</div>
+              </div>
+              <div className="rounded-lg p-3" style={{ background: "#FFFFFF", border: "1px solid #DEDCD3" }}>
+                <div className="text-[10px] uppercase tracking-wide" style={{ color: "#545862" }}>Meta del mes</div>
+                <div className="font-mono font-bold text-lg" style={{ color: "#14161A" }}>{money(budgetDollars)}</div>
+              </div>
+              <div className="rounded-lg p-3" style={{ background: "#FFFFFF", border: "1px solid #DEDCD3" }}>
+                <div className="text-[10px] uppercase tracking-wide" style={{ color: "#545862" }}>% cumplido</div>
+                <div className="font-mono font-bold text-lg" style={{ color: pctDollars >= 100 ? "#2E7D32" : "#E4002B" }}>{budgetDollars > 0 ? `${Math.round(pctDollars)}%` : "—"}</div>
+              </div>
+              <div className="rounded-lg p-3" style={{ background: "#FFFFFF", border: "1px solid #DEDCD3" }}>
+                <div className="text-[10px] uppercase tracking-wide" style={{ color: "#545862" }}>Días restantes</div>
+                <div className="font-mono font-bold text-lg" style={{ color: "#14161A" }}>{daysLeftInMonth()}</div>
+              </div>
+            </div>
+
+            <div className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: "#E4002B" }}>Desempeño por asesor</div>
+            <table className="w-full text-xs mb-6" style={{ borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ background: "#14161A" }}>
+                  {["Asesor", "Ventas", "Total", "Ticket prom.", "% meta", "Cotizados", "Tasa cierre"].map((h) => (
+                    <th key={h} className="text-left px-2 py-2" style={{ color: "#F2F1EC" }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {ASESORES.map((a, i) => {
+                  const ranked = byAsesor.find((r) => normalizeKey(r.asesor) === normalizeKey(a.nombre));
+                  const presu = presupuestoPorAsesor.find((p) => p.asesor === a.nombre);
+                  const perf = asesorPerformance.find((r) => r.asesor === a.nombre);
+                  return (
+                    <tr key={a.nombre} style={{ background: i % 2 ? "#E9E7DF" : "#FFFFFF" }}>
+                      <td className="px-2 py-2 font-semibold">{a.nombre}</td>
+                      <td className="px-2 py-2">{ranked ? ranked.count : 0}</td>
+                      <td className="px-2 py-2 font-mono">{money(ranked ? ranked.total : 0)}</td>
+                      <td className="px-2 py-2 font-mono">{money(ranked ? ranked.ticket : 0)}</td>
+                      <td className="px-2 py-2 font-mono font-semibold" style={{ color: presu && presu.pctDolares >= 100 ? "#2E7D32" : "#E4002B" }}>
+                        {presu && presu.metaDolares > 0 ? `${Math.round(presu.pctDolares)}%` : "—"}
+                      </td>
+                      <td className="px-2 py-2">{perf ? perf.cotizaciones : 0}</td>
+                      <td className="px-2 py-2 font-mono">{perf && perf.tasaCierre !== null ? `${Math.round(perf.tasaCierre)}%` : "—"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+              <div className="rounded-lg p-3" style={{ background: "#FFFFFF", border: "1px solid #DEDCD3" }}>
+                <div className="text-[10px] uppercase tracking-wide" style={{ color: "#545862" }}>Moto más vendida</div>
+                <div className="font-bold text-sm mt-1">{byModelo[0] ? byModelo[0].modelo : "—"}</div>
+                <div className="text-[11px]" style={{ color: "#545862" }}>{byModelo[0] ? `${byModelo[0].count} unidades` : ""}</div>
+              </div>
+              <div className="rounded-lg p-3" style={{ background: "#FFFFFF", border: "1px solid #DEDCD3" }}>
+                <div className="text-[10px] uppercase tracking-wide" style={{ color: "#545862" }}>Canal más fuerte</div>
+                <div className="font-bold text-sm mt-1">{byCanalVentas[0] ? byCanalVentas[0].origen : "—"}</div>
+                <div className="text-[11px]" style={{ color: "#545862" }}>{byCanalVentas[0] ? `${byCanalVentas[0].count} ventas` : ""}</div>
+              </div>
+              <div className="rounded-lg p-3" style={{ background: "#FFFFFF", border: "1px solid #DEDCD3" }}>
+                <div className="text-[10px] uppercase tracking-wide" style={{ color: "#545862" }}>Forma de pago más usada</div>
+                <div className="font-bold text-sm mt-1">{byFormaPago[0] ? byFormaPago[0].formaPago : "—"}</div>
+                <div className="text-[11px]" style={{ color: "#545862" }}>{byFormaPago[0] ? `${byFormaPago[0].count} ventas` : ""}</div>
+              </div>
+            </div>
+
+            <div className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: "#E4002B" }}>
+              Recomendaciones para cumplir el presupuesto
+            </div>
+            <div className="flex flex-col gap-2 mb-6">
+              {recomendaciones.map((r, i) => (
+                <div
+                  key={i}
+                  className="rounded-md px-3 py-2.5 text-xs"
+                  style={{
+                    background: r.tipo === "alerta" ? "#FDECEC" : r.tipo === "positivo" ? "#E9F5EA" : r.tipo === "individual" ? "#FFF4DD" : "#EFEEE9",
+                    border: `1px solid ${r.tipo === "alerta" ? "#E4002B" : r.tipo === "positivo" ? "#2E7D32" : r.tipo === "individual" ? "#C98A00" : "#DEDCD3"}`,
+                    color: "#14161A",
+                  }}
+                >
+                  {r.texto}
+                </div>
+              ))}
+            </div>
+
+            <div className="text-[10px] pt-3" style={{ color: "#8A8F98", borderTop: "1px solid #DEDCD3" }}>
+              Documento generado automáticamente desde GIP — Honda Santo Domingo. Preparado por Alejandro A., Jefe de Tienda.
+            </div>
+          </div>
+        </div>
+        )}
       </div>
     </div>
   );
@@ -4666,6 +4858,12 @@ export default function App() {
         input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.7); }
         select { -webkit-appearance: none; appearance: none; }
         ::selection { background: #E4002B; color: #fff; }
+        @media print {
+          body * { visibility: hidden; }
+          #printable-reunion, #printable-reunion * { visibility: visible; }
+          #printable-reunion { position: absolute; left: 0; top: 0; width: 100%; }
+          .no-print { display: none !important; }
+        }
       `}</style>
       {role === null && <RoleSelect onPick={setRole} />}
       {role === "asesor" && <AsesorView onExit={() => setRole(null)} />}
