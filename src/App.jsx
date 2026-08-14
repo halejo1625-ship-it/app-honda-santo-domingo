@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { Plus, Trash2, LogOut, Lock, Download, ChevronRight, Loader2, Upload, FileSpreadsheet, MessageCircle, Send, X } from "lucide-react";
+import { Plus, Trash2, LogOut, Lock, Download, ChevronRight, Loader2, Upload, FileSpreadsheet, MessageCircle, Send, X, RefreshCw } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import * as XLSX from "xlsx";
 import { loadDoc, saveDoc, subscribeChat, sendChatMessage } from "./firebase";
@@ -2890,34 +2890,46 @@ function AdminView({ onExit }) {
   const [crmFiltroPago, setCrmFiltroPago] = useState("Todos");
   const [crmExpandedId, setCrmExpandedId] = useState(null);
 
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadAllAdminData = async () => {
+    const [allSales, budget, savedQuotes, allCaja, allTransfers, allEgresos, allProyecciones, allRecordatorios, allCrm] = await Promise.all([
+      loadSales(),
+      loadBudget(monthKey),
+      loadQuotes(monthKey),
+      loadCajaEntries(),
+      loadTransferencias(),
+      loadEgresos(),
+      loadProyecciones(),
+      loadRecordatorios(),
+      loadCRM(),
+    ]);
+    setSales(allSales);
+    setBudgetUnits(budget.units || 0);
+    setBudgetDollars(budget.dollars || 0);
+    setBudgetForm({ units: budget.units || "", dollars: budget.dollars || "" });
+    setQuotes(savedQuotes);
+    setCajaEntries(allCaja);
+    setTransferencias(allTransfers);
+    setEgresos(allEgresos);
+    setProyecciones(allProyecciones);
+    setRecordatorios(allRecordatorios);
+    setCrm(allCrm);
+  };
+
   useEffect(() => {
     if (!unlocked) return;
     (async () => {
-      const [allSales, budget, savedQuotes, allCaja, allTransfers, allEgresos, allProyecciones, allRecordatorios, allCrm] = await Promise.all([
-        loadSales(),
-        loadBudget(monthKey),
-        loadQuotes(monthKey),
-        loadCajaEntries(),
-        loadTransferencias(),
-        loadEgresos(),
-        loadProyecciones(),
-        loadRecordatorios(),
-        loadCRM(),
-      ]);
-      setSales(allSales);
-      setBudgetUnits(budget.units || 0);
-      setBudgetDollars(budget.dollars || 0);
-      setBudgetForm({ units: budget.units || "", dollars: budget.dollars || "" });
-      setQuotes(savedQuotes);
-      setCajaEntries(allCaja);
-      setTransferencias(allTransfers);
-      setEgresos(allEgresos);
-      setProyecciones(allProyecciones);
-      setRecordatorios(allRecordatorios);
-      setCrm(allCrm);
+      await loadAllAdminData();
       setLoading(false);
     })();
   }, [unlocked]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadAllAdminData();
+    setRefreshing(false);
+  };
 
   useEffect(() => {
     setCajaDayFilter("todos");
@@ -3379,8 +3391,20 @@ function AdminView({ onExit }) {
       <ChatWidget senderName="Alejandro" senderRole="Administrador" />
       <div className="max-w-3xl lg:max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-7">
         <div className="rounded-lg p-4 sm:p-5" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
-          <div className="font-semibold uppercase text-xs tracking-[0.14em] mb-3" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
-            Periodo del reporte
+          <div className="flex items-center justify-between mb-3">
+            <div className="font-semibold uppercase text-xs tracking-[0.14em]" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
+              Periodo del reporte
+            </div>
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md disabled:opacity-50"
+              style={{ color: "#C9CDD3", border: "1px solid #2A2E35" }}
+            >
+              <RefreshCw size={13} className={refreshing ? "animate-spin" : ""} />
+              {refreshing ? "Actualizando..." : "Actualizar"}
+            </button>
           </div>
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <select
