@@ -2165,6 +2165,7 @@ function CajeraView({ onExit }) {
       ingresado: false,
       revisado: false,
       cajera: name,
+      observaciones: "",
     };
     await syncedArrayUpdate({
       loadFn: loadCajaEntries,
@@ -2504,7 +2505,7 @@ function CajeraView({ onExit }) {
         )}
 
         <div className="overflow-x-auto rounded-lg" style={{ border: "1px solid #2A2E35" }}>
-          <table className="w-full text-xs" style={{ minWidth: 720 }}>
+          <table className="w-full text-xs" style={{ minWidth: 880 }}>
             <thead>
               <tr style={{ background: "#1E2126", color: "#8A8F98" }}>
                 <th className="text-left font-medium uppercase tracking-wide px-2 py-2.5">Comprobante</th>
@@ -2513,6 +2514,7 @@ function CajeraView({ onExit }) {
                 <th className="text-right font-medium uppercase tracking-wide px-2 py-2.5">Valor</th>
                 <th className="text-center font-medium uppercase tracking-wide px-2 py-2.5">Ingresado</th>
                 <th className="text-center font-medium uppercase tracking-wide px-2 py-2.5">Revisado</th>
+                <th className="text-left font-medium uppercase tracking-wide px-2 py-2.5">Observaciones</th>
                 <th className="px-2 py-2.5"></th>
               </tr>
             </thead>
@@ -2570,6 +2572,16 @@ function CajeraView({ onExit }) {
                   <td className="px-2 py-1.5 text-center">
                     <input type="checkbox" checked={e.revisado} onChange={() => toggleCheck(e.id, "revisado")} />
                   </td>
+                  <td className="px-2 py-1.5">
+                    <input
+                      value={e.observaciones || ""}
+                      onChange={(ev) => updateRow(e.id, "observaciones", ev.target.value)}
+                      onBlur={() => commitRow(e.id)}
+                      placeholder="Nota opcional..."
+                      className="rounded px-1.5 py-1.5 outline-none text-xs"
+                      style={{ background: "transparent", border: "none", color: "#F2F1EC", width: "100%" }}
+                    />
+                  </td>
                   <td className="px-2 py-1.5 text-center">
                     <button onClick={() => deleteRow(e.id)} aria-label="Eliminar">
                       <Trash2 size={14} color="#8A8F98" />
@@ -2579,7 +2591,7 @@ function CajeraView({ onExit }) {
               ))}
               {dayEntries.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="text-center py-8 text-xs" style={{ color: "#8A8F98" }}>
+                  <td colSpan={8} className="text-center py-8 text-xs" style={{ color: "#8A8F98" }}>
                     Sin comprobantes para esta fecha todavía.
                   </td>
                 </tr>
@@ -4240,10 +4252,10 @@ function AdminView({ onExit }) {
             </div>
           ) : (
             <div className="overflow-x-auto rounded-lg" style={{ border: "1px solid #2A2E35" }}>
-              <table className="w-full text-xs" style={{ minWidth: 680 }}>
+              <table className="w-full text-xs" style={{ minWidth: 840 }}>
                 <thead>
                   <tr style={{ background: "#1E2126", color: "#8A8F98" }}>
-                    {["Fecha", "Responsable", "Comprobante", "Cliente", "Portcoll", "Valor", "Ingresado", "Revisado"].map((h) => (
+                    {["Fecha", "Responsable", "Comprobante", "Cliente", "Portcoll", "Valor", "Ingresado", "Revisado", "Observaciones"].map((h) => (
                       <th key={h} className="text-left font-medium uppercase tracking-wide px-3 py-2.5">{h}</th>
                     ))}
                   </tr>
@@ -4261,6 +4273,7 @@ function AdminView({ onExit }) {
                         <td className="px-3 py-2.5 whitespace-nowrap font-mono font-semibold" style={{ color: "#FFC72C" }}>{moneyExact(Number(e.valor) || 0)}</td>
                         <td className="px-3 py-2.5 whitespace-nowrap">{e.ingresado ? "✓" : "—"}</td>
                         <td className="px-3 py-2.5 whitespace-nowrap">{e.revisado ? "✓" : "—"}</td>
+                        <td className="px-3 py-2.5" style={{ color: "#8A8F98", maxWidth: 200 }}>{e.observaciones || "—"}</td>
                       </tr>
                     ))}
                 </tbody>
