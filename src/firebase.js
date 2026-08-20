@@ -78,3 +78,23 @@ export async function sendChatMessage(message) {
     }
   }
 }
+
+// Agrega un elemento a una lista de forma ATÓMICA — a diferencia de "leer todo,
+// modificar, guardar todo", esto no se puede pisar aunque dos personas guarden
+// casi al mismo instante. Ideal para "agregar" (una venta, un comprobante, etc.).
+export async function appendToArray(key, item) {
+  const ref = doc(db, COLLECTION, key);
+  try {
+    await withTimeout(updateDoc(ref, { value: arrayUnion(item), updatedAt: Date.now() }));
+    return true;
+  } catch (e) {
+    // El documento probablemente no existe todavía — lo creamos con este primer elemento.
+    try {
+      await withTimeout(setDoc(ref, { value: [item], updatedAt: Date.now() }));
+      return true;
+    } catch (e2) {
+      console.error("Firestore append error:", key, e2);
+      return false;
+    }
+  }
+}
