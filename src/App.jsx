@@ -595,6 +595,7 @@ async function appendEgreso(item) {
 
 
 
+
 // ---------- odometer ----------
 function Odometer({ value, digits = 6 }) {
   const str = Math.round(Math.max(0, value)).toString().padStart(digits, "0").slice(-digits);
@@ -1693,9 +1694,11 @@ function AsesorView({ onExit }) {
   // hiciste), aunque en pantalla se muestren de más reciente a más antigua.
   // Numera las ventas dentro de cada mes por separado (la #1 es la primera
   // factura de ESE mes, y vuelve a empezar en 1 el mes siguiente).
+  // Numera solo las MOTOS dentro de cada mes (el producto de fuerza no cuenta
+  // como moto, por eso no tiene número — se distingue con su propia etiqueta).
   const mySalesNumberById = useMemo(() => {
     const porMes = {};
-    mySales.forEach((s) => {
+    mySales.filter(isMoto).forEach((s) => {
       const mes = s.fecha.slice(0, 7);
       if (!porMes[mes]) porMes[mes] = [];
       porMes[mes].push(s);
@@ -2182,7 +2185,7 @@ function AsesorView({ onExit }) {
                     return (
                       <React.Fragment key={s.id}>
                         <tr style={{ background: i % 2 ? "#181a1f" : "#1E2126", color: "#F2F1EC" }}>
-                          <td className="px-3 py-2.5 whitespace-nowrap font-mono" style={{ color: "#8A8F98" }}>#{mySalesNumberById[s.id]}</td>
+                          <td className="px-3 py-2.5 whitespace-nowrap font-mono" style={{ color: "#8A8F98" }}>{mySalesNumberById[s.id] ? `#${mySalesNumberById[s.id]}` : "—"}</td>
                           <td className="px-3 py-2.5 whitespace-nowrap">
                             <div className="flex items-center gap-1.5">
                               <span>{s.modelo}</span>
@@ -4071,9 +4074,13 @@ function AdminView({ onExit }) {
   // el equipo juntas, mes a mes (para saber cuántas motos van en total). Es
   // independiente de la numeración que ve cada asesor en su propia pantalla,
   // que empieza en 1 solo para sus propias ventas.
+  // Numeración GENERAL para el administrador: cuenta solo las MOTOS de todo el
+  // equipo juntas, mes a mes (el producto de fuerza no cuenta como moto, así
+  // que no consume número aquí — se ve aparte en la pestaña Fuerza). Es
+  // independiente de la numeración que ve cada asesor en su propia pantalla.
   const salesNumberById = useMemo(() => {
     const porMes = {};
-    sales.forEach((s) => {
+    sales.filter(isMoto).forEach((s) => {
       const mes = s.fecha.slice(0, 7);
       if (!porMes[mes]) porMes[mes] = [];
       porMes[mes].push(s);
@@ -5045,7 +5052,7 @@ function AdminView({ onExit }) {
                         borderLeft: completo ? "3px solid #2E7D32" : "3px solid transparent",
                       }}
                     >
-                      <td className="px-3 py-2.5 whitespace-nowrap font-mono" style={{ color: "#8A8F98" }}>{salesNumberById[s.id]}</td>
+                      <td className="px-3 py-2.5 whitespace-nowrap font-mono" style={{ color: "#8A8F98" }}>{salesNumberById[s.id] || "—"}</td>
                       <td className="px-3 py-2.5 whitespace-nowrap">{s.asesor}</td>
                       <td className="px-3 py-2.5 whitespace-nowrap">{s.factura}</td>
                       <td className="px-3 py-2.5 whitespace-nowrap">{s.fecha}</td>
