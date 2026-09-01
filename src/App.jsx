@@ -86,6 +86,113 @@ const CIUDADES_ECUADOR = [
   "Zamora", "Centinela del Cóndor", "Chinchipe", "El Pangui", "Nangaritza",
   "Palanda", "Paquisha", "Yacuambi", "Yantzaza",
 ].sort((a, b) => a.localeCompare(b, "es"));
+
+// Coordenadas aproximadas de cada provincia dentro del mapa estilizado (% del
+// viewBox, no es cartografía exacta — solo para ubicar la región correcta).
+const PROVINCIA_COORDS = {
+  "Carchi": { x: 46, y: 6 },
+  "Imbabura": { x: 44, y: 13 },
+  "Esmeraldas": { x: 20, y: 12 },
+  "Sucumbíos": { x: 62, y: 9 },
+  "Pichincha": { x: 42, y: 19 },
+  "Santo Domingo de los Tsáchilas": { x: 31, y: 21 },
+  "Napo": { x: 58, y: 21 },
+  "Orellana": { x: 70, y: 19 },
+  "Manabí": { x: 17, y: 29 },
+  "Cotopaxi": { x: 40, y: 27 },
+  "Los Ríos": { x: 27, y: 34 },
+  "Tungurahua": { x: 45, y: 30 },
+  "Pastaza": { x: 60, y: 33 },
+  "Bolívar": { x: 35, y: 33 },
+  "Chimborazo": { x: 40, y: 37 },
+  "Guayas": { x: 21, y: 43 },
+  "Cañar": { x: 37, y: 45 },
+  "Santa Elena": { x: 10, y: 45 },
+  "Morona Santiago": { x: 54, y: 47 },
+  "Azuay": { x: 37, y: 53 },
+  "El Oro": { x: 23, y: 57 },
+  "Loja": { x: 35, y: 65 },
+  "Zamora Chinchipe": { x: 51, y: 63 },
+  "Galápagos": { x: 6, y: 78 },
+};
+// A qué provincia pertenece cada ciudad/cantón (para ubicarla en el mapa).
+const CIUDAD_PROVINCIA = {
+  "Cuenca": "Azuay", "Gualaceo": "Azuay", "Paute": "Azuay", "Sigsig": "Azuay",
+  "Chordeleg": "Azuay", "Girón": "Azuay", "Santa Isabel": "Azuay", "Nabón": "Azuay",
+  "Oña": "Azuay", "Pucará": "Azuay", "San Fernando": "Azuay", "Sevilla de Oro": "Azuay",
+  "Guachapala": "Azuay", "Camilo Ponce Enríquez": "Azuay", "El Pan": "Azuay",
+  "Guaranda": "Bolívar", "San Miguel": "Bolívar", "Chillanes": "Bolívar",
+  "Chimbo": "Bolívar", "Echeandía": "Bolívar", "Caluma": "Bolívar", "Las Naves": "Bolívar",
+  "Azogues": "Cañar", "Biblián": "Cañar", "Cañar": "Cañar", "La Troncal": "Cañar",
+  "El Tambo": "Cañar", "Déleg": "Cañar", "Suscal": "Cañar",
+  "Tulcán": "Carchi", "Bolívar": "Carchi", "El Ángel": "Carchi", "Mira": "Carchi",
+  "San Gabriel": "Carchi", "Huaca": "Carchi",
+  "Riobamba": "Chimborazo", "Alausí": "Chimborazo", "Colta": "Chimborazo",
+  "Chambo": "Chimborazo", "Chunchi": "Chimborazo", "Guamote": "Chimborazo",
+  "Guano": "Chimborazo", "Pallatanga": "Chimborazo", "Penipe": "Chimborazo", "Cumandá": "Chimborazo",
+  "Latacunga": "Cotopaxi", "La Maná": "Cotopaxi", "Pangua": "Cotopaxi",
+  "Pujilí": "Cotopaxi", "Salcedo": "Cotopaxi", "Saquisilí": "Cotopaxi", "Sigchos": "Cotopaxi",
+  "Machala": "El Oro", "Arenillas": "El Oro", "Balsas": "El Oro", "El Guabo": "El Oro",
+  "Huaquillas": "El Oro", "Marcabelí": "El Oro", "Pasaje": "El Oro", "Piñas": "El Oro",
+  "Portovelo": "El Oro", "Santa Rosa": "El Oro", "Zaruma": "El Oro", "Las Lajas": "El Oro",
+  "Chilla": "El Oro", "Atahualpa": "El Oro",
+  "Esmeraldas": "Esmeraldas", "Atacames": "Esmeraldas", "Valdez": "Esmeraldas",
+  "Muisne": "Esmeraldas", "Quinindé": "Esmeraldas", "Rioverde": "Esmeraldas", "San Lorenzo": "Esmeraldas",
+  "Puerto Baquerizo Moreno": "Galápagos", "Puerto Ayora": "Galápagos", "Puerto Villamil": "Galápagos",
+  "Guayaquil": "Guayas", "Jujan": "Guayas", "Balao": "Guayas", "Balzar": "Guayas",
+  "Colimes": "Guayas", "Daule": "Guayas", "Durán": "Guayas", "El Empalme": "Guayas",
+  "El Triunfo": "Guayas", "Milagro": "Guayas", "Naranjal": "Guayas", "Naranjito": "Guayas",
+  "Nobol": "Guayas", "Palestina": "Guayas", "Pedro Carbo": "Guayas", "Playas": "Guayas",
+  "Salitre": "Guayas", "Samborondón": "Guayas", "Yaguachi": "Guayas", "Santa Lucía": "Guayas",
+  "Simón Bolívar": "Guayas", "Isidro Ayora": "Guayas", "Lomas de Sargentillo": "Guayas", "Bucay": "Guayas",
+  "Ibarra": "Imbabura", "Atuntaqui": "Imbabura", "Cotacachi": "Imbabura",
+  "Otavalo": "Imbabura", "Pimampiro": "Imbabura", "Urcuquí": "Imbabura",
+  "Loja": "Loja", "Cariamanga": "Loja", "Catamayo": "Loja", "Celica": "Loja",
+  "Amaluza": "Loja", "Gonzanamá": "Loja", "Macará": "Loja", "Catacocha": "Loja",
+  "Puyango": "Loja", "Quilanga": "Loja", "Saraguro": "Loja", "Sozoranga": "Loja",
+  "Zapotillo": "Loja", "Pindal": "Loja", "Olmedo": "Loja",
+  "Babahoyo": "Los Ríos", "Baba": "Los Ríos", "Buena Fe": "Los Ríos", "Mocache": "Los Ríos",
+  "Montalvo": "Los Ríos", "Palenque": "Los Ríos", "Puebloviejo": "Los Ríos",
+  "Quevedo": "Los Ríos", "Quinsaloma": "Los Ríos", "Catarama": "Los Ríos",
+  "Valencia": "Los Ríos", "Ventanas": "Los Ríos", "Vinces": "Los Ríos",
+  "Portoviejo": "Manabí", "Calceta": "Manabí", "Chone": "Manabí", "El Carmen": "Manabí",
+  "Flavio Alfaro": "Manabí", "Jama": "Manabí", "Jaramijó": "Manabí", "Jipijapa": "Manabí",
+  "Junín": "Manabí", "Manta": "Manabí", "Montecristi": "Manabí", "Pajan": "Manabí",
+  "Pedernales": "Manabí", "Pichincha": "Manabí", "Puerto López": "Manabí",
+  "Rocafuerte": "Manabí", "San Vicente": "Manabí", "Santa Ana": "Manabí",
+  "Bahía de Caráquez": "Manabí", "Tosagua": "Manabí", "24 de Mayo": "Manabí",
+  "Macas": "Morona Santiago", "Gualaquiza": "Morona Santiago", "Huamboya": "Morona Santiago",
+  "Limón Indanza": "Morona Santiago", "Logroño": "Morona Santiago", "Palora": "Morona Santiago",
+  "San Juan Bosco": "Morona Santiago", "Santiago": "Morona Santiago", "Sucúa": "Morona Santiago",
+  "Taisha": "Morona Santiago", "Tiwintza": "Morona Santiago", "Pablo Sexto": "Morona Santiago",
+  "Tena": "Napo", "Archidona": "Napo", "Carlos Julio Arosemena Tola": "Napo",
+  "El Chaco": "Napo", "Baeza": "Napo",
+  "El Coca": "Orellana", "Nuevo Rocafuerte": "Orellana", "Joya de los Sachas": "Orellana", "Loreto": "Orellana",
+  "Puyo": "Pastaza", "Arajuno": "Pastaza", "Mera": "Pastaza", "Santa Clara": "Pastaza",
+  "Quito": "Pichincha", "Cayambe": "Pichincha", "Machachi": "Pichincha", "Tabacundo": "Pichincha",
+  "Pedro Vicente Maldonado": "Pichincha", "Puerto Quito": "Pichincha", "Sangolquí": "Pichincha",
+  "San Miguel de los Bancos": "Pichincha",
+  "Santa Elena": "Santa Elena", "La Libertad": "Santa Elena", "Salinas": "Santa Elena",
+  "Santo Domingo": "Santo Domingo de los Tsáchilas", "La Concordia": "Santo Domingo de los Tsáchilas",
+  "Lago Agrio": "Sucumbíos", "Cascales": "Sucumbíos", "Cuyabeno": "Sucumbíos",
+  "Gonzalo Pizarro": "Sucumbíos", "Putumayo": "Sucumbíos", "Shushufindi": "Sucumbíos",
+  "Ambato": "Tungurahua", "Baños de Agua Santa": "Tungurahua", "Cevallos": "Tungurahua",
+  "Mocha": "Tungurahua", "Patate": "Tungurahua", "Pelileo": "Tungurahua",
+  "Píllaro": "Tungurahua", "Quero": "Tungurahua", "Tisaleo": "Tungurahua",
+  "Zamora": "Zamora Chinchipe", "Centinela del Cóndor": "Zamora Chinchipe",
+  "Chinchipe": "Zamora Chinchipe", "El Pangui": "Zamora Chinchipe", "Nangaritza": "Zamora Chinchipe",
+  "Palanda": "Zamora Chinchipe", "Paquisha": "Zamora Chinchipe", "Yacuambi": "Zamora Chinchipe",
+  "Yantzaza": "Zamora Chinchipe",
+};
+// Genera un pequeño desplazamiento fijo (según el nombre) para que varias
+// ciudades de la misma provincia no queden todas en el mismo punto exacto.
+const jitterFromName = (name) => {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) % 10000;
+  const angle = (hash % 360) * (Math.PI / 180);
+  const dist = 1.5 + (hash % 5) * 0.5;
+  return { dx: Math.cos(angle) * dist, dy: Math.sin(angle) * dist };
+};
 const ADMIN_PIN = "2026";
 
 const ASESORES = [
@@ -461,6 +568,7 @@ async function appendEgreso(item) {
   const ok = await appendToArray("caja-egresos", item);
   return ok ? await loadEgresos() : null;
 }
+
 
 
 
@@ -3236,6 +3344,8 @@ function AdminView({ onExit }) {
   const [avanceMesFin, setAvanceMesFin] = useState(monthKey);
   const [avanceFiltroAsesor, setAvanceFiltroAsesor] = useState("Todos");
   const [avanceBudgets, setAvanceBudgets] = useState({});
+  const [mapaMesInicio, setMapaMesInicio] = useState(monthKey);
+  const [mapaMesFin, setMapaMesFin] = useState(monthKey);
   const [cajaDayFilter, setCajaDayFilter] = useState("todos");
   const [rangeFrom, setRangeFrom] = useState(todayISO());
   const [rangeTo, setRangeTo] = useState(todayISO());
@@ -3585,6 +3695,44 @@ function AdminView({ onExit }) {
 
     return { data, metaTotal, vendidoTotal: acumuladoReal };
   }, [motoSales, avanceMonthsList.join(","), avanceBudgets, avanceFiltroAsesor]);
+
+  // ---------- Mapa de ventas por ciudad ----------
+  const mapaMonthsList = useMemo(
+    () => monthsBetween(mapaMesInicio, mapaMesFin),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [mapaMesInicio, mapaMesFin]
+  );
+
+  const ventasPorCiudad = useMemo(() => {
+    const enRango = motoSales.filter((s) => mapaMonthsList.includes(s.fecha.slice(0, 7)));
+    const map = {};
+    let sinCiudad = 0;
+    enRango.forEach((s) => {
+      const ciudad = (s.ciudad || "").trim();
+      if (!ciudad) {
+        sinCiudad += 1;
+        return;
+      }
+      if (!map[ciudad]) map[ciudad] = { ciudad, total: 0, count: 0 };
+      map[ciudad].total += s.valor / 1.15;
+      map[ciudad].count += 1;
+    });
+    const lista = Object.values(map).sort((a, b) => b.total - a.total);
+    const maxTotal = lista.length > 0 ? lista[0].total : 0;
+    return { lista, maxTotal, sinCiudad };
+  }, [motoSales, mapaMonthsList.join(",")]);
+
+  const mapaPuntos = useMemo(() => {
+    return ventasPorCiudad.lista
+      .map((c) => {
+        const provincia = CIUDAD_PROVINCIA[c.ciudad];
+        const base = provincia ? PROVINCIA_COORDS[provincia] : null;
+        if (!base) return null;
+        const { dx, dy } = jitterFromName(c.ciudad);
+        return { ...c, x: base.x + dx, y: base.y + dy };
+      })
+      .filter(Boolean);
+  }, [ventasPorCiudad]);
 
   const salesInPeriod = useMemo(() => {
     if (periodSelection === "todo") return motoSales;
@@ -5438,6 +5586,106 @@ function AdminView({ onExit }) {
                   <Line type="monotone" dataKey="real" stroke="#FFC72C" strokeWidth={2.5} dot={false} />
                 </ComposedChart>
               </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="mt-6">
+            <div className="text-[11px] uppercase tracking-[0.12em] font-medium mb-1" style={{ color: "#8A8F98" }}>
+              Mapa de ventas por ciudad
+            </div>
+            <div className="text-[11px] mb-3" style={{ color: "#8A8F98" }}>
+              Ubica de dónde son los clientes que compran, según la ciudad registrada en cada venta. Mapa esquemático (no es cartografía exacta).
+            </div>
+
+            <div className="rounded-lg p-4 sm:p-5 mb-4" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <Field label="Desde">
+                  <select value={mapaMesInicio} onChange={(e) => setMapaMesInicio(e.target.value)} className="rounded-md px-3 py-2.5 text-sm outline-none" style={inputStyle}>
+                    {availableMonthsAsc.map((m) => (
+                      <option key={m} value={m}>{monthLabel(m)}</option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Hasta">
+                  <select value={mapaMesFin} onChange={(e) => setMapaMesFin(e.target.value)} className="rounded-md px-3 py-2.5 text-sm outline-none" style={inputStyle}>
+                    {availableMonthsAsc.map((m) => (
+                      <option key={m} value={m}>{monthLabel(m)}</option>
+                    ))}
+                  </select>
+                </Field>
+                <span className="text-xs mt-1 sm:mt-6" style={{ color: "#8A8F98" }}>
+                  {ventasPorCiudad.lista.length} {ventasPorCiudad.lista.length === 1 ? "ciudad" : "ciudades"} con ventas
+                  {ventasPorCiudad.sinCiudad > 0 && ` · ${ventasPorCiudad.sinCiudad} sin ciudad registrada`}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <div className="lg:col-span-2 rounded-lg p-4" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+                {mapaPuntos.length === 0 ? (
+                  <div className="text-sm text-center py-16" style={{ color: "#8A8F98" }}>
+                    No hay ventas con ciudad registrada en este rango.
+                  </div>
+                ) : (
+                  <svg viewBox="0 0 80 85" className="w-full" style={{ maxHeight: 480 }}>
+                    <path
+                      d="M 40,2 L 55,3 L 68,5 L 65,20 L 60,30 L 58,45 L 55,60 L 50,68 L 40,72 L 30,68 L 20,60 L 12,45 L 8,30 L 10,15 L 20,8 L 30,4 Z"
+                      fill="#181a1f"
+                      stroke="#2A2E35"
+                      strokeWidth="0.5"
+                    />
+                    {/* Galápagos, aparte al suroeste */}
+                    <circle cx="6" cy="76" r="1.3" fill="#181a1f" stroke="#2A2E35" strokeWidth="0.3" />
+                    <circle cx="3.5" cy="79.5" r="0.9" fill="#181a1f" stroke="#2A2E35" strokeWidth="0.3" />
+                    <text x="9" y="80" fontSize="2.2" fill="#4A4E56">Galápagos</text>
+
+                    {mapaPuntos.map((p) => {
+                      const r = ventasPorCiudad.maxTotal > 0 ? 1 + (p.total / ventasPorCiudad.maxTotal) * 4.5 : 1.2;
+                      return (
+                        <circle
+                          key={p.ciudad}
+                          cx={p.x}
+                          cy={p.y}
+                          r={r}
+                          fill="#E4002B"
+                          fillOpacity="0.7"
+                          stroke="#FFC72C"
+                          strokeWidth="0.35"
+                        >
+                          <title>{`${p.ciudad} · ${money(p.total)} · ${p.count} ${p.count === 1 ? "venta" : "ventas"}`}</title>
+                        </circle>
+                      );
+                    })}
+                  </svg>
+                )}
+                <div className="text-[10px] text-center mt-1" style={{ color: "#4A4E56" }}>
+                  El tamaño del círculo indica cuánto se vendió en esa ciudad · pasa el mouse sobre un círculo para ver el detalle
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <div className="text-[11px] uppercase tracking-[0.12em] font-medium" style={{ color: "#8A8F98" }}>
+                  Ranking de ciudades
+                </div>
+                {ventasPorCiudad.lista.length === 0 ? (
+                  <div className="text-sm text-center py-6 rounded-lg" style={{ color: "#8A8F98", background: "#1E2126", border: "1px dashed #2A2E35" }}>
+                    Sin datos
+                  </div>
+                ) : (
+                  ventasPorCiudad.lista.slice(0, 12).map((c, i) => (
+                    <div key={c.ciudad} className="rounded-lg px-3 py-2 flex items-center justify-between gap-2" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="font-mono text-[10px] shrink-0" style={{ color: "#4A4E56" }}>{i + 1}</span>
+                        <span className="text-sm truncate" style={{ color: "#F2F1EC" }}>{c.ciudad}</span>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="font-mono text-xs font-semibold" style={{ color: "#FFC72C" }}>{money(c.total)}</div>
+                        <div className="text-[10px]" style={{ color: "#8A8F98" }}>{c.count} {c.count === 1 ? "venta" : "ventas"}</div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         </div>
