@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Plus, Trash2, LogOut, Lock, Download, ChevronRight, ChevronLeft, Loader2, Upload, FileSpreadsheet, MessageCircle, Send, X, RefreshCw, LayoutGrid, Wallet, TrendingUp, Zap, Bell, Users, FileText, BarChart3 } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine, ComposedChart, Line, Legend } from "recharts";
 import * as XLSX from "xlsx";
 import { loadDoc, saveDoc, subscribeChat, sendChatMessage, appendToArray } from "./firebase";
 
@@ -395,6 +395,7 @@ async function appendEgreso(item) {
   const ok = await appendToArray("caja-egresos", item);
   return ok ? await loadEgresos() : null;
 }
+
 
 
 
@@ -3286,9 +3287,13 @@ function AdminView({ onExit }) {
       return enRango && esDelAsesor;
     });
     const totales = Array.from({ length: 31 }, () => 0);
+    const unidades = Array.from({ length: 31 }, () => 0);
     inRange.forEach((s) => {
       const dia = Number(s.fecha.slice(8, 10));
-      if (dia >= 1 && dia <= 31) totales[dia - 1] += s.valor / 1.15;
+      if (dia >= 1 && dia <= 31) {
+        totales[dia - 1] += s.valor / 1.15;
+        unidades[dia - 1] += 1;
+      }
     });
 
     let totalPresupuesto = 0;
@@ -3307,7 +3312,7 @@ function AdminView({ onExit }) {
     const numAsesores = statsFiltroAsesor === "Todos" ? 1 : ASESORES.length || 1;
     const metaDiaria = totalDias > 0 ? totalPresupuesto / totalDias / numAsesores : 0;
 
-    return totales.map((total, i) => ({ dia: i + 1, total, meta: metaDiaria }));
+    return totales.map((total, i) => ({ dia: i + 1, total, unidades: unidades[i], meta: metaDiaria }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [motoSales, statsMonthsList.join(","), statsBudgets, statsFiltroAsesor]);
 
@@ -3317,6 +3322,44 @@ function AdminView({ onExit }) {
     return statsHistogramData.reduce((best, d) => (d.total > best.total ? d : best), statsHistogramData[0]);
   }, [statsHistogramData]);
   const statsTotalPeriodo = statsHistogramData.reduce((sum, d) => sum + d.total, 0);
+
+  // Calcula, dentro del mes, qué tramo de fechas vende más: inicio (1-10),
+  // mediados (11-20) o fin de mes (21-31) — tanto global como por cada asesor.
+  const TRAMOS_MES = [
+    { label: "Inicio de mes (días 1-10)", desde: 1, hasta: 10 },
+    { label: "Mediados de mes (días 11-20)", desde: 11, hasta: 20 },
+    { label: "Fin de mes (días 21-31)", desde: 21, hasta: 31 },
+  ];
+
+  const mejorTramoDeVentas = (ventasFiltradas) => {
+    const totalesPorTramo = TRAMOS_MES.map((t) => ({ ...t, total: 0, count: 0 }));
+    ventasFiltradas.forEach((s) => {
+      const dia = Number(s.fecha.slice(8, 10));
+      const tramo = totalesPorTramo.find((t) => dia >= t.desde && dia <= t.hasta);
+      if (tramo) {
+        tramo.total += s.valor / 1.15;
+        tramo.count += 1;
+      }
+    });
+    if (totalesPorTramo.every((t) => t.total === 0)) return null;
+    return totalesPorTramo.reduce((best, t) => (t.total > best.total ? t : best), totalesPorTramo[0]);
+  };
+
+  const statsMejorTramoGlobal = useMemo(() => {
+    const inRange = motoSales.filter((s) => statsMonthsList.includes(s.fecha.slice(0, 7)));
+    return mejorTramoDeVentas(inRange);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [motoSales, statsMonthsList.join(",")]);
+
+  const statsMejorTramoPorAsesor = useMemo(() => {
+    return ASESORES.map((a) => {
+      const inRange = motoSales.filter(
+        (s) => statsMonthsList.includes(s.fecha.slice(0, 7)) && s.asesor.trim() === a.nombre
+      );
+      return { asesor: a.nombre, tramo: mejorTramoDeVentas(inRange) };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [motoSales, statsMonthsList.join(",")]);
 
   const salesInPeriod = useMemo(() => {
     if (periodSelection === "todo") return motoSales;
@@ -5001,32 +5044,88 @@ function AdminView({ onExit }) {
           </div>
 
           <div className="rounded-lg p-4" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
-            <ResponsiveContainer width="100%" height={320}>
-              <BarChart data={statsHistogramData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                <CartesianGrid vertical={false} stroke="#2A2E35" />
+            <div className="flex items-center gap-4 mb-2 text-[11px]" style={{ color: "#8A8F98" }}>
+              <span className="flex items-center gap-1.5"><span style={{ width: 10, height: 10, background: "#E4002B", borderRadius: 2, display: "inline-block" }} /> Vendido ($)</span>
+              <span className="flex items-center gap-1.5"><span style={{ width: 10, height: 2, background: "#0EA5E9", display: "inline-block" }} /> Unidades vendidas (línea de frecuencia)</span>
+              <span className="flex items-center gap-1.5"><span style={{ width: 10, height: 2, background: "#FFC72C", display: "inline-block", borderTop: "2px dashed #FFC72C" }} /> Meta diaria ($)</span>
+            </div>
+            <ResponsiveContainer width="100%" height={340}>
+              <ComposedChart data={statsHistogramData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <CartesianGrid stroke="#2A2E35" />
                 <XAxis dataKey="dia" tick={{ fill: "#8A8F98", fontSize: 10 }} axisLine={{ stroke: "#2A2E35" }} tickLine={false} interval={0} />
-                <YAxis tick={{ fill: "#8A8F98", fontSize: 10 }} axisLine={{ stroke: "#2A2E35" }} tickLine={false} tickFormatter={(v) => `$${v >= 1000 ? `${Math.round(v / 1000)}k` : v}`} />
+                <YAxis
+                  yAxisId="dolares"
+                  tick={{ fill: "#8A8F98", fontSize: 10 }}
+                  axisLine={{ stroke: "#2A2E35" }}
+                  tickLine={false}
+                  tickFormatter={(v) => `$${v >= 1000 ? `${Math.round(v / 1000)}k` : v}`}
+                />
+                <YAxis
+                  yAxisId="unidades"
+                  orientation="right"
+                  allowDecimals={false}
+                  tick={{ fill: "#0EA5E9", fontSize: 10 }}
+                  axisLine={{ stroke: "#2A2E35" }}
+                  tickLine={false}
+                />
                 <Tooltip
-                  formatter={(v, name) => [money(v), name === "total" ? "Vendido ese día" : "Meta diaria"]}
+                  formatter={(v, name) => {
+                    if (name === "unidades") return [`${v} ${v === 1 ? "unidad" : "unidades"}`, "Unidades vendidas"];
+                    if (name === "meta") return [money(v), "Meta diaria"];
+                    return [money(v), "Vendido ese día"];
+                  }}
                   labelFormatter={(d) => `Día ${d} del mes`}
                   contentStyle={{ background: "#1E2126", border: "1px solid #2A2E35", borderRadius: 6, color: "#F2F1EC" }}
                   labelStyle={{ color: "#F2F1EC" }}
                 />
                 {statsMetaDiaria > 0 && (
                   <ReferenceLine
+                    yAxisId="dolares"
                     y={statsMetaDiaria}
                     stroke="#FFC72C"
                     strokeDasharray="4 4"
                     label={{ value: "Meta diaria", position: "insideTopRight", fill: "#FFC72C", fontSize: 10 }}
                   />
                 )}
-                <Bar dataKey="total" radius={[3, 3, 0, 0]}>
+                <Bar yAxisId="dolares" dataKey="total" radius={[3, 3, 0, 0]}>
                   {statsHistogramData.map((d, i) => (
                     <Cell key={i} fill={statsMetaDiaria > 0 && d.total >= statsMetaDiaria ? "#2E7D32" : d.total > 0 ? "#E4002B" : "#2A2E35"} />
                   ))}
                 </Bar>
-              </BarChart>
+                <Line yAxisId="unidades" type="monotone" dataKey="unidades" stroke="#0EA5E9" strokeWidth={2} dot={{ r: 2, fill: "#0EA5E9" }} />
+              </ComposedChart>
             </ResponsiveContainer>
+          </div>
+
+          <div className="mt-4">
+            <div className="text-[11px] uppercase tracking-[0.12em] font-medium mb-2" style={{ color: "#8A8F98" }}>
+              Mejor rango de fechas del mes
+            </div>
+            <div className="rounded-lg p-4 mb-2" style={{ background: "#1E2126", border: "1px solid #E4002B" }}>
+              <div className="text-sm font-medium" style={{ color: "#F2F1EC" }}>Toda la tienda</div>
+              <div className="text-lg font-semibold mt-0.5" style={{ color: "#FFC72C", fontFamily: "'Oswald',sans-serif" }}>
+                {statsMejorTramoGlobal ? statsMejorTramoGlobal.label : "Sin ventas suficientes"}
+              </div>
+              {statsMejorTramoGlobal && (
+                <div className="text-xs mt-1" style={{ color: "#8A8F98" }}>
+                  {money(statsMejorTramoGlobal.total)} · {statsMejorTramoGlobal.count} {statsMejorTramoGlobal.count === 1 ? "venta" : "ventas"}
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col gap-2">
+              {statsMejorTramoPorAsesor.map((a) => (
+                <div key={a.asesor} className="rounded-lg px-4 py-2.5 flex items-center justify-between gap-3 flex-wrap" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+                  <span className="text-sm font-medium" style={{ color: "#F2F1EC" }}>{a.asesor}</span>
+                  {a.tramo ? (
+                    <div className="text-xs text-right" style={{ color: "#8A8F98" }}>
+                      <span style={{ color: "#FFC72C", fontWeight: 600 }}>{a.tramo.label}</span> · {money(a.tramo.total)} · {a.tramo.count} {a.tramo.count === 1 ? "venta" : "ventas"}
+                    </div>
+                  ) : (
+                    <span className="text-xs" style={{ color: "#8A8F98" }}>Sin ventas en este rango</span>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
         )}
