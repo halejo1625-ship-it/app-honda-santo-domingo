@@ -596,6 +596,7 @@ async function appendEgreso(item) {
 
 
 
+
 // ---------- odometer ----------
 function Odometer({ value, digits = 6 }) {
   const str = Math.round(Math.max(0, value)).toString().padStart(digits, "0").slice(-digits);
@@ -4634,6 +4635,7 @@ function AdminView({ onExit }) {
                     formatter={(v) => money(v)}
                     contentStyle={{ background: "#1E2126", border: "1px solid #2A2E35", borderRadius: 6, color: "#F2F1EC" }}
                     labelStyle={{ color: "#F2F1EC" }}
+                    itemStyle={{ color: "#F2F1EC" }}
                   />
                   <Bar dataKey="total" radius={[0, 4, 4, 0]}>
                     {byAsesor.map((_, i) => (
@@ -4688,6 +4690,7 @@ function AdminView({ onExit }) {
                       formatter={(v) => [`${v} unidades`, "Vendidas"]}
                       contentStyle={{ background: "#1E2126", border: "1px solid #2A2E35", borderRadius: 6, color: "#F2F1EC" }}
                       labelStyle={{ color: "#F2F1EC" }}
+                      itemStyle={{ color: "#F2F1EC" }}
                     />
                     <Bar dataKey="count" radius={[0, 4, 4, 0]} cursor="pointer" onClick={(data) => showDrilldown(`Moto: ${data.modelo}`, (s) => s.modelo === data.modelo)}>
                       {byModelo.map((_, i) => (
@@ -4721,6 +4724,7 @@ function AdminView({ onExit }) {
                       formatter={(v) => [`${v} ventas`, "Total"]}
                       contentStyle={{ background: "#1E2126", border: "1px solid #2A2E35", borderRadius: 6, color: "#F2F1EC" }}
                       labelStyle={{ color: "#F2F1EC" }}
+                      itemStyle={{ color: "#F2F1EC" }}
                     />
                     <Bar dataKey="count" radius={[0, 4, 4, 0]} cursor="pointer" onClick={(data) => showDrilldown(`Canal: ${data.origen}`, (s) => s.origen === data.origen)}>
                       {byCanalVentas.map((_, i) => (
@@ -4754,6 +4758,7 @@ function AdminView({ onExit }) {
                       formatter={(v) => [`${v} ventas`, "Total"]}
                       contentStyle={{ background: "#1E2126", border: "1px solid #2A2E35", borderRadius: 6, color: "#F2F1EC" }}
                       labelStyle={{ color: "#F2F1EC" }}
+                      itemStyle={{ color: "#F2F1EC" }}
                     />
                     <Bar dataKey="count" radius={[0, 4, 4, 0]} cursor="pointer" onClick={(data) => showDrilldown(`Forma de pago: ${data.formaPago}`, (s) => s.formaPago === data.formaPago)}>
                       {byFormaPago.map((_, i) => (
@@ -5574,6 +5579,7 @@ function AdminView({ onExit }) {
                   labelFormatter={(d) => `Día ${d} del mes`}
                   contentStyle={{ background: "#1E2126", border: "1px solid #2A2E35", borderRadius: 6, color: "#F2F1EC" }}
                   labelStyle={{ color: "#F2F1EC" }}
+                  itemStyle={{ color: "#F2F1EC" }}
                 />
                 {statsMetaDiaria > 0 && (
                   <ReferenceLine
@@ -5703,6 +5709,7 @@ function AdminView({ onExit }) {
                     labelFormatter={(f) => `Fecha: ${f}`}
                     contentStyle={{ background: "#1E2126", border: "1px solid #2A2E35", borderRadius: 6, color: "#F2F1EC" }}
                     labelStyle={{ color: "#F2F1EC" }}
+                    itemStyle={{ color: "#F2F1EC" }}
                   />
                   {/* Línea de fondo: cuánto se debería llevar acumulado según el presupuesto */}
                   <Area type="monotone" dataKey="meta" stroke="#8A8F98" strokeDasharray="4 4" fill="#8A8F98" fillOpacity={0.06} strokeWidth={1.5} />
