@@ -20,6 +20,72 @@ const MODELOS_MOTO = [
   "NX190", "TORNADO 300", "SAHARA 300", "XR650", "CBR500", "CB650R", "NX500X",
   "TRANSALP", "AFRICA TWIN STD", "AFRICA TWIN ADV S",
 ];
+const CIUDADES_ECUADOR = [
+  // Azuay
+  "Cuenca", "Gualaceo", "Paute", "Sigsig", "Chordeleg", "Girón", "Santa Isabel",
+  "Nabón", "Oña", "Pucará", "San Fernando", "Sevilla de Oro", "Guachapala",
+  "Camilo Ponce Enríquez", "El Pan",
+  // Bolívar
+  "Guaranda", "San Miguel", "Chillanes", "Chimbo", "Echeandía", "Caluma", "Las Naves",
+  // Cañar
+  "Azogues", "Biblián", "Cañar", "La Troncal", "El Tambo", "Déleg", "Suscal",
+  // Carchi
+  "Tulcán", "Bolívar", "El Ángel", "Mira", "San Gabriel", "Huaca",
+  // Chimborazo
+  "Riobamba", "Alausí", "Colta", "Chambo", "Chunchi", "Guamote", "Guano",
+  "Pallatanga", "Penipe", "Cumandá",
+  // Cotopaxi
+  "Latacunga", "La Maná", "Pangua", "Pujilí", "Salcedo", "Saquisilí", "Sigchos",
+  // El Oro
+  "Machala", "Arenillas", "Balsas", "El Guabo", "Huaquillas", "Marcabelí",
+  "Pasaje", "Piñas", "Portovelo", "Santa Rosa", "Zaruma", "Las Lajas", "Chilla", "Atahualpa",
+  // Esmeraldas
+  "Esmeraldas", "Atacames", "Valdez", "Muisne", "Quinindé", "Rioverde", "San Lorenzo",
+  // Galápagos
+  "Puerto Baquerizo Moreno", "Puerto Ayora", "Puerto Villamil",
+  // Guayas
+  "Guayaquil", "Jujan", "Balao", "Balzar", "Colimes", "Daule", "Durán",
+  "El Empalme", "El Triunfo", "Milagro", "Naranjal", "Naranjito", "Nobol",
+  "Palestina", "Pedro Carbo", "Playas", "Salitre", "Samborondón", "Yaguachi",
+  "Santa Lucía", "Simón Bolívar", "Isidro Ayora", "Lomas de Sargentillo", "Bucay",
+  // Imbabura
+  "Ibarra", "Atuntaqui", "Cotacachi", "Otavalo", "Pimampiro", "Urcuquí",
+  // Loja
+  "Loja", "Cariamanga", "Catamayo", "Celica", "Amaluza", "Gonzanamá", "Macará",
+  "Catacocha", "Puyango", "Quilanga", "Saraguro", "Sozoranga", "Zapotillo", "Pindal", "Olmedo",
+  // Los Ríos
+  "Babahoyo", "Baba", "Buena Fe", "Mocache", "Montalvo", "Palenque", "Puebloviejo",
+  "Quevedo", "Quinsaloma", "Catarama", "Valencia", "Ventanas", "Vinces",
+  // Manabí
+  "Portoviejo", "Calceta", "Chone", "El Carmen", "Flavio Alfaro", "Jama",
+  "Jaramijó", "Jipijapa", "Junín", "Manta", "Montecristi", "Pajan", "Pedernales",
+  "Pichincha", "Puerto López", "Rocafuerte", "San Vicente", "Santa Ana",
+  "Bahía de Caráquez", "Tosagua", "24 de Mayo",
+  // Morona Santiago
+  "Macas", "Gualaquiza", "Huamboya", "Limón Indanza", "Logroño", "Palora",
+  "San Juan Bosco", "Santiago", "Sucúa", "Taisha", "Tiwintza", "Pablo Sexto",
+  // Napo
+  "Tena", "Archidona", "Carlos Julio Arosemena Tola", "El Chaco", "Baeza",
+  // Orellana
+  "El Coca", "Nuevo Rocafuerte", "Joya de los Sachas", "Loreto",
+  // Pastaza
+  "Puyo", "Arajuno", "Mera", "Santa Clara",
+  // Pichincha
+  "Quito", "Cayambe", "Machachi", "Tabacundo", "Pedro Vicente Maldonado",
+  "Puerto Quito", "Sangolquí", "San Miguel de los Bancos",
+  // Santa Elena
+  "Santa Elena", "La Libertad", "Salinas",
+  // Santo Domingo de los Tsáchilas
+  "Santo Domingo", "La Concordia",
+  // Sucumbíos
+  "Lago Agrio", "Cascales", "Cuyabeno", "Gonzalo Pizarro", "Putumayo", "Shushufindi",
+  // Tungurahua
+  "Ambato", "Baños de Agua Santa", "Cevallos", "Mocha", "Patate", "Pelileo",
+  "Píllaro", "Quero", "Tisaleo",
+  // Zamora Chinchipe
+  "Zamora", "Centinela del Cóndor", "Chinchipe", "El Pangui", "Nangaritza",
+  "Palanda", "Paquisha", "Yacuambi", "Yantzaza",
+].sort((a, b) => a.localeCompare(b, "es"));
 const ADMIN_PIN = "2026";
 
 const ASESORES = [
@@ -411,6 +477,7 @@ async function appendEgreso(item) {
 
 
 
+
 // ---------- odometer ----------
 function Odometer({ value, digits = 6 }) {
   const str = Math.round(Math.max(0, value)).toString().padStart(digits, "0").slice(-digits);
@@ -538,6 +605,75 @@ function Field({ label, children }) {
       </span>
       {children}
     </label>
+  );
+}
+
+// Campo de texto con autocompletar: filtra la lista de opciones a medida que
+// se escribe, para encontrar rápido en listas largas (ej. ciudades del Ecuador).
+function SearchableSelect({ value, onChange, options, placeholder, inputStyle }) {
+  const [texto, setTexto] = useState(value || "");
+  const [abierto, setAbierto] = useState(false);
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    setTexto(value || "");
+  }, [value]);
+
+  useEffect(() => {
+    const handleClickFuera = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) {
+        setAbierto(false);
+        setTexto(value || "");
+      }
+    };
+    document.addEventListener("mousedown", handleClickFuera);
+    return () => document.removeEventListener("mousedown", handleClickFuera);
+  }, [value]);
+
+  const filtradas = useMemo(() => {
+    const q = texto.trim().toLowerCase();
+    if (!q) return options.slice(0, 40);
+    return options.filter((o) => o.toLowerCase().includes(q)).slice(0, 40);
+  }, [texto, options]);
+
+  return (
+    <div ref={wrapRef} className="relative">
+      <input
+        value={texto}
+        onChange={(e) => {
+          setTexto(e.target.value);
+          setAbierto(true);
+        }}
+        onFocus={() => setAbierto(true)}
+        placeholder={placeholder}
+        autoComplete="off"
+        className="rounded-md px-3 py-2.5 outline-none w-full"
+        style={inputStyle}
+      />
+      {abierto && filtradas.length > 0 && (
+        <div
+          className="absolute z-20 mt-1 w-full rounded-md overflow-y-auto"
+          style={{ background: "#1E2126", border: "1px solid #2A2E35", maxHeight: 220 }}
+        >
+          {filtradas.map((o) => (
+            <button
+              key={o}
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                onChange(o);
+                setTexto(o);
+                setAbierto(false);
+              }}
+              className="w-full text-left px-3 py-2 text-sm"
+              style={{ color: o === value ? "#E4002B" : "#F2F1EC" }}
+            >
+              {o}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -1367,6 +1503,7 @@ function AsesorView({ onExit }) {
     factura: "",
     fecha: todayISO(),
     cliente: "",
+    ciudad: "",
     modelo: "",
     formaPago: FORMAS_PAGO[0],
     origen: ORIGENES[0],
@@ -1521,7 +1658,7 @@ function AsesorView({ onExit }) {
     if (e && e.preventDefault) e.preventDefault();
     setError("");
     setJustSaved(false);
-    if (!form.factura.trim() || !form.cliente.trim() || !form.modelo.trim() || !form.valor) {
+    if (!form.factura.trim() || !form.cliente.trim() || !form.ciudad.trim() || !form.modelo.trim() || !form.valor) {
       setError("Completa todos los campos antes de registrar.");
       return;
     }
@@ -1538,6 +1675,7 @@ function AsesorView({ onExit }) {
         factura: form.factura.trim(),
         fecha: form.fecha,
         cliente: form.cliente.trim(),
+        ciudad: form.ciudad.trim(),
         modelo: form.modelo.trim(),
         formaPago: form.formaPago,
         origen: form.origen,
@@ -1555,6 +1693,7 @@ function AsesorView({ onExit }) {
           factura: "",
           fecha: todayISO(),
           cliente: "",
+          ciudad: "",
           modelo: "",
           formaPago: FORMAS_PAGO[0],
           origen: ORIGENES[0],
@@ -1809,6 +1948,15 @@ function AsesorView({ onExit }) {
           <Field label="Cliente">
             <input value={form.cliente} onChange={(e) => setForm({ ...form, cliente: e.target.value })} className="rounded-md px-3 py-2.5 outline-none" style={inputStyle} />
           </Field>
+          <Field label="Ciudad *">
+            <SearchableSelect
+              value={form.ciudad}
+              onChange={(v) => setForm({ ...form, ciudad: v })}
+              options={CIUDADES_ECUADOR}
+              placeholder="Escribe para buscar..."
+              inputStyle={inputStyle}
+            />
+          </Field>
           <Field label="Tipo de venta">
             <select value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value, modelo: "" })} className="rounded-md px-3 py-2.5 outline-none" style={inputStyle}>
               {TIPO_VENTA.map((t) => (
@@ -1895,7 +2043,7 @@ function AsesorView({ onExit }) {
               <table className="w-full text-xs" style={{ minWidth: 860 }}>
                 <thead>
                   <tr style={{ background: "#1E2126", color: "#8A8F98" }}>
-                    {["N°", "Modelo", "Factura", "Cliente", "Fecha", "Pago", "Origen", "Valor", "Entrega", "Observaciones", ""].map((h) => (
+                    {["N°", "Modelo", "Factura", "Cliente", "Ciudad", "Fecha", "Pago", "Origen", "Valor", "Entrega", "Observaciones", ""].map((h) => (
                       <th key={h} className="text-left font-medium uppercase tracking-wide px-3 py-2.5">{h}</th>
                     ))}
                   </tr>
@@ -1923,6 +2071,7 @@ function AsesorView({ onExit }) {
                           </td>
                           <td className="px-3 py-2.5 whitespace-nowrap">{s.factura}</td>
                           <td className="px-3 py-2.5 whitespace-nowrap">{s.cliente}</td>
+                          <td className="px-3 py-2.5 whitespace-nowrap">{s.ciudad || "—"}</td>
                           <td className="px-3 py-2.5 whitespace-nowrap">{s.fecha}</td>
                           <td className="px-3 py-2.5 whitespace-nowrap">{s.formaPago}</td>
                           <td className="px-3 py-2.5 whitespace-nowrap">{s.origen}</td>
@@ -1950,7 +2099,7 @@ function AsesorView({ onExit }) {
                         </tr>
                         {isMoto(s) && expanded && (
                           <tr style={{ background: "#181a1f" }}>
-                            <td colSpan={11} className="px-4 py-3" style={{ borderTop: "1px solid #2A2E35", borderBottom: "1px solid #2A2E35" }}>
+                            <td colSpan={12} className="px-4 py-3" style={{ borderTop: "1px solid #2A2E35", borderBottom: "1px solid #2A2E35" }}>
                               <div className="flex flex-col gap-2.5">
                                 {ENTREGA_PASOS.map((paso, idx) => {
                                   const checked = !!(s.entrega && s.entrega[paso.key]);
@@ -3694,7 +3843,7 @@ function AdminView({ onExit }) {
   }, [sales]);
 
   const exportCSV = () => {
-    const header = ["Asesor", "Factura", "Fecha", "Cliente", "Modelo", "Forma de pago", "Origen", "Valor", "Entrega", "Observaciones"];
+    const header = ["Asesor", "Factura", "Fecha", "Cliente", "Ciudad", "Modelo", "Forma de pago", "Origen", "Valor", "Entrega", "Observaciones"];
     const rows = filteredSales.map((s) => {
       const progress = entregaProgress(s);
       const completo = progress.done === progress.total;
@@ -3706,7 +3855,7 @@ function AdminView({ onExit }) {
         : currentStep
         ? `${progress.done}/${progress.total} - ${currentStep.label}`
         : "Sin iniciar";
-      return [s.asesor, s.factura, s.fecha, s.cliente, s.modelo, s.formaPago, s.origen, s.valor, entregaTxt, s.observaciones || ""];
+      return [s.asesor, s.factura, s.fecha, s.cliente, s.ciudad || "", s.modelo, s.formaPago, s.origen, s.valor, entregaTxt, s.observaciones || ""];
     });
     const csv = [header, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
@@ -4613,7 +4762,7 @@ function AdminView({ onExit }) {
               <table className="w-full text-xs" style={{ minWidth: 880 }}>
                 <thead>
                   <tr style={{ background: "#1E2126", color: "#8A8F98" }}>
-                    {["N°", "Asesor", "Factura", "Fecha", "Cliente", "Modelo", "Pago", "Origen", "Valor", "Entrega", "Observaciones"].map((h) => (
+                    {["N°", "Asesor", "Factura", "Fecha", "Cliente", "Ciudad", "Modelo", "Pago", "Origen", "Valor", "Entrega", "Observaciones"].map((h) => (
                       <th key={h} className="text-left font-medium uppercase tracking-wide px-3 py-2.5">{h}</th>
                     ))}
                   </tr>
@@ -4637,6 +4786,7 @@ function AdminView({ onExit }) {
                       <td className="px-3 py-2.5 whitespace-nowrap">{s.factura}</td>
                       <td className="px-3 py-2.5 whitespace-nowrap">{s.fecha}</td>
                       <td className="px-3 py-2.5 whitespace-nowrap">{s.cliente}</td>
+                      <td className="px-3 py-2.5 whitespace-nowrap">{s.ciudad || "—"}</td>
                       <td className="px-3 py-2.5 whitespace-nowrap">
                         {isMoto(s) ? (
                           <select
