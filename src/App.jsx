@@ -388,6 +388,7 @@ async function appendEgreso(item) {
 
 
 
+
 // ---------- odometer ----------
 function Odometer({ value, digits = 6 }) {
   const str = Math.round(Math.max(0, value)).toString().padStart(digits, "0").slice(-digits);
@@ -1407,15 +1408,14 @@ function AsesorView({ onExit }) {
     const norm = name.trim().toLowerCase();
     return sales
       .filter((s) => s.asesor.trim().toLowerCase() === norm)
-      .sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
+      .sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : a.id < b.id ? -1 : 1));
   }, [sales, name]);
 
-  // Numera las ventas en el orden en que se registraron (la primera que subiste es la #1),
-  // sin importar el orden en que se muestren en pantalla (que es por fecha de la factura).
+  // Numera las ventas según el orden mostrado (por fecha de facturación) —
+  // la #1 es la factura más antigua, y así sucesivamente.
   const mySalesNumberById = useMemo(() => {
-    const byCreation = [...mySales].sort((a, b) => (a.id < b.id ? -1 : 1));
     const map = {};
-    byCreation.forEach((s, i) => {
+    mySales.forEach((s, i) => {
       map[s.id] = i + 1;
     });
     return map;
@@ -1660,7 +1660,7 @@ function AsesorView({ onExit }) {
     <div className="min-h-screen" style={{ background: "#14161A" }}>
       <TopBar title={`Asesor · ${name}`} onExit={handleLogout} />
       <ChatWidget senderName={name} senderRole="Asesor" />
-      <div className="max-w-lg lg:max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-6">
+      <div className="w-full px-4 sm:px-6 lg:px-10 py-6 flex flex-col gap-6">
         {!storageOk && (
           <div className="rounded-lg px-4 py-3 text-xs" style={{ background: "#3A1F1F", border: "1px solid #E4002B", color: "#FFD3D3" }}>
             No se detecta guardado en este momento. Cierra y vuelve a abrir la app; si sigue igual, avísale a Alejandro.
