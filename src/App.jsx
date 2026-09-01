@@ -591,6 +591,7 @@ async function appendEgreso(item) {
 
 
 
+
 // ---------- odometer ----------
 function Odometer({ value, digits = 6 }) {
   const str = Math.round(Math.max(0, value)).toString().padStart(digits, "0").slice(-digits);
@@ -1763,7 +1764,7 @@ function AsesorView({ onExit }) {
   };
 
   const totalProyecciones = myProyecciones.reduce((sum, p) => sum + (Number(p.valor) || 0) / 1.15, 0);
-  const sumaProyectada = myTotal / 1.15 + totalProyecciones;
+  const sumaProyectada = myDollarsSoldMonth + totalProyecciones;
   const pctProyectado = myBudgetDollars > 0 ? (sumaProyectada / myBudgetDollars) * 100 : null;
 
 
@@ -2032,10 +2033,10 @@ function AsesorView({ onExit }) {
               Total vendido
             </span>
             <span className="font-mono font-semibold text-xl" style={{ color: "#F2F1EC" }}>
-              {money(myTotal / 1.15)}
+              {money(myDollarsSoldMonth)}
             </span>
             <span className="text-xs mt-1" style={{ color: "#8A8F98" }}>
-              {myMotoSales.length} {myMotoSales.length === 1 ? "venta" : "ventas"}
+              {myMonthSales.length} {myMonthSales.length === 1 ? "venta" : "ventas"}
             </span>
             <span className="text-[10px] mt-1" style={{ color: "#8A8F98" }}>
               {daysLeftInMonth() === 0 ? "Último día del mes" : `${daysLeftInMonth()} ${daysLeftInMonth() === 1 ? "día" : "días"} para cerrar el mes`}
@@ -2381,7 +2382,7 @@ function AsesorView({ onExit }) {
         <div className="rounded-lg p-4 sm:p-5" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
           <div className="flex items-center justify-between text-xs mb-1.5">
             <span style={{ color: "#8A8F98" }}>Total vendido (facturado)</span>
-            <span className="font-mono" style={{ color: "#F2F1EC" }}>{money(myTotal / 1.15)}</span>
+            <span className="font-mono" style={{ color: "#F2F1EC" }}>{money(myDollarsSoldMonth)}</span>
           </div>
           <div className="flex items-center justify-between text-xs mb-1.5">
             <span style={{ color: "#8A8F98" }}>+ Total en proyecciones</span>
