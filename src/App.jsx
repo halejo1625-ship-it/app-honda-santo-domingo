@@ -597,6 +597,7 @@ async function appendEgreso(item) {
 
 
 
+
 // ---------- odometer ----------
 function Odometer({ value, digits = 6 }) {
   const str = Math.round(Math.max(0, value)).toString().padStart(digits, "0").slice(-digits);
@@ -3767,18 +3768,24 @@ function AdminView({ onExit }) {
 
     let acumuladoReal = 0;
     let acumuladoMeta = 0;
+    const hoy = todayISO();
+    let hoyFechaCorta = null;
     const data = dias.map((fecha, i) => {
-      acumuladoReal += porFecha[fecha] || 0;
+      const esFuturo = fecha > hoy;
+      if (!esFuturo) acumuladoReal += porFecha[fecha] || 0;
       acumuladoMeta += metaDiaria;
+      if (fecha === hoy) hoyFechaCorta = fecha.slice(5).replace("-", "/");
       return {
         fecha,
         fechaCorta: fecha.slice(5).replace("-", "/"),
-        real: Math.round(acumuladoReal * 100) / 100,
+        // Sin datos de "vendido" para días futuros — así la línea se corta en
+        // el día de hoy, en vez de seguir plana hasta fin de mes.
+        real: esFuturo ? null : Math.round(acumuladoReal * 100) / 100,
         meta: Math.round(acumuladoMeta * 100) / 100,
       };
     });
 
-    return { data, metaTotal, vendidoTotal: acumuladoReal };
+    return { data, metaTotal, vendidoTotal: acumuladoReal, hoyFechaCorta };
   }, [motoSales, avanceMonthsList.join(","), avanceBudgets, avanceFiltroAsesor]);
 
   // ---------- Mapa de ventas por ciudad ----------
@@ -5713,7 +5720,23 @@ function AdminView({ onExit }) {
                   />
                   {/* Línea de fondo: cuánto se debería llevar acumulado según el presupuesto */}
                   <Area type="monotone" dataKey="meta" stroke="#8A8F98" strokeDasharray="4 4" fill="#8A8F98" fillOpacity={0.06} strokeWidth={1.5} />
-                  <Line type="monotone" dataKey="real" stroke="#FFC72C" strokeWidth={2.5} dot={false} />
+                  {avanceChartData.hoyFechaCorta && (
+                    <ReferenceLine
+                      x={avanceChartData.hoyFechaCorta}
+                      stroke="#FFC72C"
+                      strokeDasharray="3 3"
+                      label={{ value: "Hoy", position: "top", fill: "#FFC72C", fontSize: 10 }}
+                    />
+                  )}
+                  <Line
+                    type="monotone"
+                    dataKey="real"
+                    stroke="#FFC72C"
+                    strokeWidth={2.5}
+                    dot={false}
+                    activeDot={{ r: 4 }}
+                    connectNulls={false}
+                  />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
