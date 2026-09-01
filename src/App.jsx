@@ -586,6 +586,7 @@ async function appendEgreso(item) {
 
 
 
+
 // ---------- odometer ----------
 function Odometer({ value, digits = 6 }) {
   const str = Math.round(Math.max(0, value)).toString().padStart(digits, "0").slice(-digits);
@@ -2824,11 +2825,11 @@ function CajeraView({ onExit }) {
           <div className="flex gap-3">
             <div className="rounded-lg px-4 py-2.5" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
               <div className="text-[10px] uppercase tracking-[0.12em]" style={{ color: "#8A8F98" }}>Total valor</div>
-              <div className="font-mono font-semibold text-sm" style={{ color: "#FFC72C" }}>{moneyExact(dayTotals.valor)}</div>
+              <div className="font-mono font-semibold text-lg" style={{ color: "#FFC72C" }}>{moneyExact(dayTotals.valor)}</div>
             </div>
             <div className="rounded-lg px-4 py-2.5" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
               <div className="text-[10px] uppercase tracking-[0.12em]" style={{ color: "#8A8F98" }}>Total Portcoll</div>
-              <div className="font-mono font-semibold text-sm" style={{ color: "#FFC72C" }}>{moneyExact(dayTotals.portcoll)}</div>
+              <div className="font-mono font-semibold text-lg" style={{ color: "#FFC72C" }}>{moneyExact(dayTotals.portcoll)}</div>
             </div>
           </div>
         </div>
@@ -2886,7 +2887,7 @@ function CajeraView({ onExit }) {
                       value={e.portcoll}
                       onChange={(ev) => updateRow(e.id, "portcoll", ev.target.value)}
                       onBlur={() => commitRow(e.id)}
-                      className="rounded px-1.5 py-1.5 outline-none text-xs text-right"
+                      className="rounded px-1.5 py-1.5 outline-none text-xs text-right no-spinner"
                       style={cellInputStyle}
                     />
                   </td>
@@ -2897,7 +2898,7 @@ function CajeraView({ onExit }) {
                       value={e.valor}
                       onChange={(ev) => updateRow(e.id, "valor", ev.target.value)}
                       onBlur={() => commitRow(e.id)}
-                      className="rounded px-1.5 py-1.5 outline-none text-xs text-right"
+                      className="rounded px-1.5 py-1.5 outline-none text-xs text-left no-spinner"
                       style={cellInputStyle}
                     />
                   </td>
@@ -2976,7 +2977,14 @@ function CajeraView({ onExit }) {
                         value={t.valor}
                         onChange={(ev) => updateTransfer(t.id, ev.target.value)}
                         onBlur={() => commitTransfer(t.id)}
-                        className="rounded px-1.5 py-1.5 outline-none text-xs text-right"
+                        onKeyDown={(ev) => {
+                          if (ev.key === "Enter") {
+                            ev.preventDefault();
+                            commitTransfer(t.id);
+                            addTransfer();
+                          }
+                        }}
+                        className="rounded px-1.5 py-1.5 outline-none text-xs text-right no-spinner"
                         style={{ background: "transparent", border: "none", color: "#F2F1EC", width: "100%" }}
                       />
                     </td>
@@ -3048,7 +3056,7 @@ function CajeraView({ onExit }) {
                         value={g.valor}
                         onChange={(ev) => updateEgreso(g.id, "valor", ev.target.value)}
                         onBlur={() => commitEgreso(g.id)}
-                        className="rounded px-1.5 py-1.5 outline-none text-xs text-right"
+                        className="rounded px-1.5 py-1.5 outline-none text-xs text-right no-spinner"
                         style={{ background: "transparent", border: "none", color: "#FFC72C", width: "100%" }}
                       />
                     </td>
@@ -3124,7 +3132,7 @@ function CajeraView({ onExit }) {
                         onChange={(e) => updateConteo(`b-${d}`, e.target.value)}
                         onBlur={() => commitConteo()}
                         placeholder="0"
-                        className="rounded px-2 py-1.5 text-xs text-center outline-none"
+                        className="rounded px-2 py-1.5 text-xs text-center outline-none no-spinner"
                         style={{ ...inputStyle, width: 60 }}
                       />
                       <span className="text-xs font-mono flex-1 text-right" style={{ color: "#8A8F98" }}>
@@ -3149,7 +3157,7 @@ function CajeraView({ onExit }) {
                         onChange={(e) => updateConteo(`m-${d}`, e.target.value)}
                         onBlur={() => commitConteo()}
                         placeholder="0"
-                        className="rounded px-2 py-1.5 text-xs text-center outline-none"
+                        className="rounded px-2 py-1.5 text-xs text-center outline-none no-spinner"
                         style={{ ...inputStyle, width: 60 }}
                       />
                       <span className="text-xs font-mono flex-1 text-right" style={{ color: "#8A8F98" }}>
@@ -5978,6 +5986,14 @@ export default function App() {
         input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.7); }
         select { -webkit-appearance: none; appearance: none; }
         ::selection { background: #E4002B; color: #fff; }
+        input[type="number"].no-spinner::-webkit-outer-spin-button,
+        input[type="number"].no-spinner::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        input[type="number"].no-spinner {
+          -moz-appearance: textfield;
+        }
         @media print {
           body * { visibility: hidden; }
           #printable-reunion, #printable-reunion * { visibility: visible; }
