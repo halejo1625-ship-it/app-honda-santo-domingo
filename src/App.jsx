@@ -587,6 +587,7 @@ async function appendEgreso(item) {
 
 
 
+
 // ---------- odometer ----------
 function Odometer({ value, digits = 6 }) {
   const str = Math.round(Math.max(0, value)).toString().padStart(digits, "0").slice(-digits);
@@ -2569,6 +2570,7 @@ function CajeraView({ onExit }) {
     [transferencias, selectedDate]
   );
 
+  const [focusTransferId, setFocusTransferId] = useState(null);
   const addTransfer = async () => {
     const row = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -2577,8 +2579,12 @@ function CajeraView({ onExit }) {
       cajera: name,
     };
     const updated = await appendTransferencia(row);
-    if (updated) setTransferencias(updated);
-    else setTransferError("No se pudo guardar. Revisa tu conexión.");
+    if (updated) {
+      setTransferencias(updated);
+      setFocusTransferId(row.id);
+    } else {
+      setTransferError("No se pudo guardar. Revisa tu conexión.");
+    }
   };
 
   const updateTransfer = (id, value) => {
@@ -2887,7 +2893,7 @@ function CajeraView({ onExit }) {
                       value={e.portcoll}
                       onChange={(ev) => updateRow(e.id, "portcoll", ev.target.value)}
                       onBlur={() => commitRow(e.id)}
-                      className="rounded px-1.5 py-1.5 outline-none text-xs text-right no-spinner"
+                      className="rounded px-1.5 py-1.5 outline-none text-xs text-left no-spinner"
                       style={cellInputStyle}
                     />
                   </td>
@@ -2975,6 +2981,12 @@ function CajeraView({ onExit }) {
                         type="number"
                         step="0.01"
                         value={t.valor}
+                        ref={(el) => {
+                          if (el && focusTransferId === t.id) {
+                            el.focus();
+                            setFocusTransferId(null);
+                          }
+                        }}
                         onChange={(ev) => updateTransfer(t.id, ev.target.value)}
                         onBlur={() => commitTransfer(t.id)}
                         onKeyDown={(ev) => {
@@ -2984,7 +2996,7 @@ function CajeraView({ onExit }) {
                             addTransfer();
                           }
                         }}
-                        className="rounded px-1.5 py-1.5 outline-none text-xs text-right no-spinner"
+                        className="rounded px-1.5 py-1.5 outline-none text-xs text-left no-spinner"
                         style={{ background: "transparent", border: "none", color: "#F2F1EC", width: "100%" }}
                       />
                     </td>
