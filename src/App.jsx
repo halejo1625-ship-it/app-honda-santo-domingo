@@ -590,6 +590,7 @@ async function appendEgreso(item) {
 
 
 
+
 // ---------- odometer ----------
 function Odometer({ value, digits = 6 }) {
   const str = Math.round(Math.max(0, value)).toString().padStart(digits, "0").slice(-digits);
@@ -2587,7 +2588,7 @@ function CajeraView({ onExit }) {
     const row = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       fecha: selectedDate,
-      valor: 0,
+      valor: "",
       cajera: name,
     };
     const updated = await appendTransferencia(row);
@@ -2873,8 +2874,8 @@ function CajeraView({ onExit }) {
                 <th className="text-left font-medium uppercase tracking-wide px-2 py-2.5">N°</th>
                 <th className="text-left font-medium uppercase tracking-wide px-2 py-2.5">Comprobante</th>
                 <th className="text-left font-medium uppercase tracking-wide px-2 py-2.5">Cliente</th>
-                <th className="text-right font-medium uppercase tracking-wide px-2 py-2.5">Portcoll</th>
-                <th className="text-right font-medium uppercase tracking-wide px-2 py-2.5">Valor</th>
+                <th className="text-center font-medium uppercase tracking-wide px-2 py-2.5">Portcoll</th>
+                <th className="text-center font-medium uppercase tracking-wide px-2 py-2.5">Valor</th>
                 <th className="text-center font-medium uppercase tracking-wide px-2 py-2.5">Ingresado</th>
                 <th className="text-center font-medium uppercase tracking-wide px-2 py-2.5">Revisado</th>
                 <th className="text-left font-medium uppercase tracking-wide px-2 py-2.5">Observaciones</th>
@@ -2883,7 +2884,7 @@ function CajeraView({ onExit }) {
             </thead>
             <tbody>
               {dayEntries.map((e, i) => (
-                <tr key={e.id} style={{ background: i % 2 ? "#1a1d22" : "#1E2126" }}>
+                <tr key={e.id} style={{ background: e.ingresado ? "rgba(46, 125, 50, 0.22)" : i % 2 ? "#1a1d22" : "#1E2126" }}>
                   <td className="px-2 py-1.5 font-mono" style={{ color: "#8A8F98" }}>{entriesNumberById[e.id]}</td>
                   <td className="px-2 py-1.5">
                     <select
@@ -2930,7 +2931,7 @@ function CajeraView({ onExit }) {
                       style={cellBoxStyle}
                     />
                   </td>
-                  <td className="px-2 py-1.5 text-center" style={{ background: e.ingresado ? "rgba(46, 125, 50, 0.18)" : "transparent" }}>
+                  <td className="px-2 py-1.5 text-center">
                     <input
                       type="checkbox"
                       checked={e.ingresado}
