@@ -592,6 +592,7 @@ async function appendEgreso(item) {
 
 
 
+
 // ---------- odometer ----------
 function Odometer({ value, digits = 6 }) {
   const str = Math.round(Math.max(0, value)).toString().padStart(digits, "0").slice(-digits);
@@ -3426,6 +3427,25 @@ function AdminView({ onExit }) {
     };
   }, [periodSelection, monthKey]);
 
+  // Igual que el presupuesto: cada mes guarda su propio archivo de cotizados
+  // por separado, nunca se sobrescribe el de otro mes al subir uno nuevo. Al
+  // revisar un mes anterior, se trae el que se subió ESE mes.
+  const [historicalQuotes, setHistoricalQuotes] = useState(null);
+  useEffect(() => {
+    const esOtroMes = periodSelection !== "todo" && periodSelection !== "custom" && periodSelection !== monthKey;
+    if (!esOtroMes) {
+      setHistoricalQuotes(null);
+      return;
+    }
+    let cancelado = false;
+    loadQuotes(periodSelection).then((q) => {
+      if (!cancelado) setHistoricalQuotes(q || []);
+    });
+    return () => {
+      cancelado = true;
+    };
+  }, [periodSelection, monthKey]);
+
   const [savingBudget, setSavingBudget] = useState(false);
   const [budgetSaved, setBudgetSaved] = useState(false);
 
@@ -3920,18 +3940,20 @@ function AdminView({ onExit }) {
   }, [salesInPeriod]);
 
   // ---- cotizaciones / tasa de cierre ----
+  const viewQuotes = esMesActual ? quotes : historicalQuotes || [];
+
   const quotesByAsesorKey = useMemo(() => {
     const map = {};
-    quotes.forEach((q) => {
+    viewQuotes.forEach((q) => {
       const key = normalizeKey(q.asesor) || "sin asesor";
       map[key] = (map[key] || 0) + 1;
     });
     return map;
-  }, [quotes]);
+  }, [viewQuotes]);
 
   const quotesByCanal = useMemo(() => {
     const map = {};
-    quotes.forEach((q) => {
+    viewQuotes.forEach((q) => {
       const key = q.canal || "Sin canal";
       map[key] = (map[key] || 0) + 1;
     });
@@ -3947,13 +3969,13 @@ function AdminView({ onExit }) {
     ASESORES.forEach((a) => {
       map[a.nombre] = {};
     });
-    quotes.forEach((q) => {
+    viewQuotes.forEach((q) => {
       if (!map[q.asesor]) map[q.asesor] = {};
       const canal = q.canal || "Sin canal";
       map[q.asesor][canal] = (map[q.asesor][canal] || 0) + 1;
     });
     return map;
-  }, [quotes]);
+  }, [viewQuotes]);
 
   const monthSalesCountByAsesorKey = useMemo(() => {
     const map = {};
@@ -4016,7 +4038,7 @@ function AdminView({ onExit }) {
     }).sort((a, b) => b.ticket - a.ticket);
   }, [byAsesor, quotesByAsesorKey, monthSalesCountByAsesorKey]);
 
-  const totalQuotesMonth = quotes.length;
+  const totalQuotesMonth = viewQuotes.length;
   const tasaCierreGlobal = totalQuotesMonth > 0 ? (monthSales.length / totalQuotesMonth) * 100 : null;
 
   const filteredSales = useMemo(() => {
@@ -4785,48 +4807,66 @@ function AdminView({ onExit }) {
 
         <div>
           <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-3" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
-            Cotizaciones y tasa de cierre · {monthLabel(monthKey)}
+            Cotizaciones y tasa de cierre · {monthLabel(budgetViewMonthKey)}
           </div>
 
-          <div className="rounded-lg p-4 sm:p-5 flex flex-col gap-3" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-              <label
-                className="flex items-center justify-center gap-2 rounded-md px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.08em] cursor-pointer shrink-0"
-                style={{ background: "#E4002B", color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}
-              >
-                {uploadingQuotes ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-                Subir Excel de cotizados
-                <input type="file" accept=".xlsx,.xls,.csv" onChange={handleQuotesUpload} className="hidden" disabled={uploadingQuotes} />
-              </label>
+          {esMesActual ? (
+            <div className="rounded-lg p-4 sm:p-5 flex flex-col gap-3" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <label
+                  className="flex items-center justify-center gap-2 rounded-md px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.08em] cursor-pointer shrink-0"
+                  style={{ background: "#E4002B", color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}
+                >
+                  {uploadingQuotes ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                  Subir Excel de cotizados
+                  <input type="file" accept=".xlsx,.xls,.csv" onChange={handleQuotesUpload} className="hidden" disabled={uploadingQuotes} />
+                </label>
+                <div className="text-xs" style={{ color: "#8A8F98" }}>
+                  {quotes.length > 0 ? (
+                    <>
+                      <FileSpreadsheet size={12} className="inline mr-1" style={{ verticalAlign: "-2px" }} />
+                      {quotes.length} clientes cotizados cargados{quotesFileName ? ` · ${quotesFileName}` : ""}
+                    </>
+                  ) : (
+                    "Sube el Excel con los clientes cotizados de este mes (columnas de asesor y canal)."
+                  )}
+                </div>
+              </div>
+              {quotesError && (
+                <div className="text-xs rounded-md px-3 py-2" style={{ color: "#FFD3D3", background: "#3A1F1F", border: "1px solid #E4002B" }}>
+                  {quotesError}
+                </div>
+              )}
+              {quotes.length > 0 && (
+                <div className="text-[11px]" style={{ color: "#8A8F98" }}>
+                  Subir un nuevo archivo reemplaza las cotizaciones cargadas este mes.
+                </div>
+              )}
+              {discardedQuotesCount > 0 && (
+                <div className="text-xs rounded-md px-3 py-2" style={{ color: "#FFC72C", background: "#3A2E1F", border: "1px solid #FFC72C" }}>
+                  {discardedQuotesCount} fila{discardedQuotesCount === 1 ? "" : "s"} descartada{discardedQuotesCount === 1 ? "" : "s"} por no pertenecer a Adrian, Fernanda o Steven.
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="rounded-lg p-4 sm:p-5" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
               <div className="text-xs" style={{ color: "#8A8F98" }}>
-                {quotes.length > 0 ? (
+                {viewQuotes.length > 0 ? (
                   <>
                     <FileSpreadsheet size={12} className="inline mr-1" style={{ verticalAlign: "-2px" }} />
-                    {quotes.length} clientes cotizados cargados{quotesFileName ? ` · ${quotesFileName}` : ""}
+                    Ese mes se subieron {viewQuotes.length} cotizados. Estás viendo un mes anterior — no se puede subir un archivo nuevo aquí.
                   </>
                 ) : (
-                  "Sube el Excel con los clientes cotizados de este mes (columnas de asesor y canal)."
+                  "No se subió ningún archivo de cotizados para este mes."
                 )}
               </div>
+              <div className="text-[11px] mt-1" style={{ color: "#8A8F98" }}>
+                Para subir el Excel del mes en curso, ve al selector de arriba y elige {monthLabel(monthKey)}.
+              </div>
             </div>
-            {quotesError && (
-              <div className="text-xs rounded-md px-3 py-2" style={{ color: "#FFD3D3", background: "#3A1F1F", border: "1px solid #E4002B" }}>
-                {quotesError}
-              </div>
-            )}
-            {quotes.length > 0 && (
-              <div className="text-[11px]" style={{ color: "#8A8F98" }}>
-                Subir un nuevo archivo reemplaza las cotizaciones cargadas este mes.
-              </div>
-            )}
-            {discardedQuotesCount > 0 && (
-              <div className="text-xs rounded-md px-3 py-2" style={{ color: "#FFC72C", background: "#3A2E1F", border: "1px solid #FFC72C" }}>
-                {discardedQuotesCount} fila{discardedQuotesCount === 1 ? "" : "s"} descartada{discardedQuotesCount === 1 ? "" : "s"} por no pertenecer a Adrian, Fernanda o Steven.
-              </div>
-            )}
-          </div>
+          )}
 
-          {quotes.length > 0 && (
+          {viewQuotes.length > 0 && (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
                 <div className="rounded-lg p-4 flex flex-col justify-center gap-1" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
