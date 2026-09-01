@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { Plus, Trash2, LogOut, Lock, Download, ChevronRight, Loader2, Upload, FileSpreadsheet, MessageCircle, Send, X, RefreshCw } from "lucide-react";
+import { Plus, Trash2, LogOut, Lock, Download, ChevronRight, Loader2, Upload, FileSpreadsheet, MessageCircle, Send, X, RefreshCw, LayoutGrid, Wallet, TrendingUp, Zap, Bell, Users, FileText } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import * as XLSX from "xlsx";
 import { loadDoc, saveDoc, subscribeChat, sendChatMessage, appendToArray } from "./firebase";
@@ -40,9 +40,9 @@ const TIPO_VENTA = ["MOTOCICLETA", "PRODUCTO DE FUERZA"];
 const isMoto = (s) => (s.tipo || "MOTOCICLETA") === "MOTOCICLETA";
 
 const TEMPERATURAS = [
-  { key: "BAJA", color: "#4A90D9" },
-  { key: "MEDIA", color: "#FFC72C" },
-  { key: "ALTA", color: "#E4002B" },
+  { key: "BAJA", color: "#3B82F6" },
+  { key: "MEDIA", color: "#F59E0B" },
+  { key: "ALTA", color: "#DC2626" },
 ];
 
 const ENTREGA_PASOS = [
@@ -385,6 +385,7 @@ async function appendEgreso(item) {
 
 
 
+
 // ---------- odometer ----------
 function Odometer({ value, digits = 6 }) {
   const str = Math.round(Math.max(0, value)).toString().padStart(digits, "0").slice(-digits);
@@ -395,14 +396,14 @@ function Odometer({ value, digits = 6 }) {
           key={i}
           className="relative w-[1.55ch] sm:w-[1.7ch] rounded-[3px] text-center overflow-hidden"
           style={{
-            background: "linear-gradient(180deg,#1a1d22 0%,#24272d 50%,#1a1d22 100%)",
+            background: "linear-gradient(180deg,#F8FAFC 0%,#24272d 50%,#F8FAFC 100%)",
             border: "1px solid #33373f",
             boxShadow: "inset 0 2px 3px rgba(0,0,0,0.6)",
           }}
         >
           <span
             className="block font-mono font-semibold tabular-nums"
-            style={{ color: "#FFC72C", fontSize: "clamp(1.1rem,3.5vw,1.7rem)", lineHeight: 1.5, letterSpacing: "-1px" }}
+            style={{ color: "#0EA5E9", fontSize: "clamp(1.1rem,3.5vw,1.7rem)", lineHeight: 1.5, letterSpacing: "-1px" }}
           >
             {d}
           </span>
@@ -417,14 +418,14 @@ function MetricOdometer({ label, value, prefix }) {
   return (
     <div
       className="rounded-lg p-4 flex flex-col gap-2"
-      style={{ background: "#1E2126", border: "1px solid #2A2E35" }}
+      style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}
     >
-      <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#8A8F98" }}>
+      <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#64748B" }}>
         {label}
       </span>
       <div className="flex items-baseline gap-1.5">
         {prefix && (
-          <span className="font-mono font-semibold" style={{ color: "#FFC72C", fontSize: "1.4rem" }}>
+          <span className="font-mono font-semibold" style={{ color: "#0EA5E9", fontSize: "1.4rem" }}>
             {prefix}
           </span>
         )}
@@ -436,19 +437,19 @@ function MetricOdometer({ label, value, prefix }) {
 
 function ProgressBar({ label, current, target, formatCurrent, formatTarget, pct, expectedPct }) {
   const clamped = Math.min(100, Math.max(0, pct));
-  const barColor = pct >= 100 ? "#2E7D32" : pct >= 70 ? "#FFC72C" : "#E4002B";
+  const barColor = pct >= 100 ? "#16A34A" : pct >= 70 ? "#0EA5E9" : "#2563EB";
   const expClamped = expectedPct !== undefined ? Math.min(100, Math.max(0, expectedPct)) : null;
   return (
-    <div className="rounded-lg p-4 flex flex-col gap-2.5" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+    <div className="rounded-lg p-4 flex flex-col gap-2.5" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
       <div className="flex items-center justify-between">
-        <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#8A8F98" }}>
+        <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#64748B" }}>
           {label}
         </span>
         <span className="font-mono font-semibold text-sm" style={{ color: barColor }}>
           {Math.round(pct)}%
         </span>
       </div>
-      <div className="w-full h-2.5 rounded-full overflow-hidden relative" style={{ background: "#14161A", border: "1px solid #2A2E35" }}>
+      <div className="w-full h-2.5 rounded-full overflow-hidden relative" style={{ background: "#F4F7FB", border: "1px solid #E2E8F0" }}>
         <div
           className="h-full rounded-full transition-all"
           style={{ width: `${clamped}%`, background: barColor }}
@@ -456,14 +457,14 @@ function ProgressBar({ label, current, target, formatCurrent, formatTarget, pct,
         {expClamped !== null && (
           <div
             className="absolute top-0 bottom-0"
-            style={{ left: `${expClamped}%`, width: 2, background: "#F2F1EC", opacity: 0.85 }}
+            style={{ left: `${expClamped}%`, width: 2, background: "#0F172A", opacity: 0.85 }}
           />
         )}
       </div>
-      <div className="text-xs flex items-center justify-between flex-wrap gap-1" style={{ color: "#8A8F98" }}>
+      <div className="text-xs flex items-center justify-between flex-wrap gap-1" style={{ color: "#64748B" }}>
         <span>{formatCurrent(current)} de {formatTarget(target)}</span>
         {expectedPct !== undefined && (
-          <span>Deberían ir en <span style={{ color: "#F2F1EC", fontWeight: 600 }}>{Math.round(expectedPct)}%</span> ({formatTarget(target * (expectedPct / 100))})</span>
+          <span>Deberían ir en <span style={{ color: "#0F172A", fontWeight: 600 }}>{Math.round(expectedPct)}%</span> ({formatTarget(target * (expectedPct / 100))})</span>
         )}
       </div>
     </div>
@@ -474,19 +475,19 @@ function ProgressBar({ label, current, target, formatCurrent, formatTarget, pct,
 function TopBar({ title, onExit }) {
   return (
     <div
-      className="flex items-center justify-between px-4 sm:px-6 py-3.5 sticky top-0 z-10"
-      style={{ background: "#14161A", borderBottom: "3px solid #E4002B" }}
+      className="flex items-center justify-between px-4 sm:px-6 py-3.5 sticky top-0 z-30"
+      style={{ background: "#2563EB" }}
     >
       <div className="flex items-center gap-2.5">
         <HondaLogo size={22} />
         <div className="leading-none">
           <div
             className="font-semibold uppercase text-[13px] sm:text-sm tracking-[0.12em]"
-            style={{ fontFamily: "'Oswald',sans-serif", color: "#F2F1EC" }}
+            style={{ fontFamily: "'Oswald',sans-serif", color: "#FFFFFF" }}
           >
             Honda Santo Domingo
           </div>
-          <div className="text-[10px] sm:text-[11px] mt-0.5" style={{ color: "#8A8F98" }}>
+          <div className="text-[10px] sm:text-[11px] mt-0.5" style={{ color: "#BFDBFE" }}>
             {title}
           </div>
         </div>
@@ -495,7 +496,7 @@ function TopBar({ title, onExit }) {
         <button
           onClick={onExit}
           className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md transition-colors"
-          style={{ color: "#C9CDD3", border: "1px solid #2A2E35" }}
+          style={{ color: "#FFFFFF", border: "1px solid rgba(255,255,255,0.4)" }}
         >
           <LogOut size={13} /> Salir
         </button>
@@ -507,7 +508,7 @@ function TopBar({ title, onExit }) {
 function Field({ label, children }) {
   return (
     <label className="flex flex-col gap-1.5">
-      <span className="text-[11px] uppercase tracking-[0.1em] font-medium" style={{ color: "#8A8F98" }}>
+      <span className="text-[11px] uppercase tracking-[0.1em] font-medium" style={{ color: "#64748B" }}>
         {label}
       </span>
       {children}
@@ -516,29 +517,29 @@ function Field({ label, children }) {
 }
 
 const inputStyle = {
-  background: "#14161A",
-  border: "1px solid #2A2E35",
-  color: "#F2F1EC",
+  background: "#F4F7FB",
+  border: "1px solid #E2E8F0",
+  color: "#0F172A",
 };
 
 // ---------- role select ----------
 function RoleSelect({ onPick }) {
   return (
-    <div className="min-h-screen flex items-center justify-center px-5 relative" style={{ background: "#14161A" }}>
+    <div className="min-h-screen flex items-center justify-center px-5 relative" style={{ background: "#F4F7FB" }}>
       <div className="w-full max-w-md">
         <div className="flex items-center gap-3 mb-8 justify-center">
           <HondaLogo size={44} />
           <div className="text-center">
             <div
               className="font-bold uppercase text-xl sm:text-2xl tracking-[0.06em] sm:tracking-[0.08em]"
-              style={{ fontFamily: "'Oswald',sans-serif", color: "#F2F1EC" }}
+              style={{ fontFamily: "'Oswald',sans-serif", color: "#0F172A" }}
             >
               Honda Santo Domingo
             </div>
-            <div className="text-xs tracking-[0.15em] uppercase" style={{ color: "#E4002B", fontWeight: 600 }}>
+            <div className="text-xs tracking-[0.15em] uppercase" style={{ color: "#2563EB", fontWeight: 600 }}>
               Compass
             </div>
-            <div className="text-[10px] tracking-[0.1em] uppercase mt-0.5" style={{ color: "#8A8F98" }}>
+            <div className="text-[10px] tracking-[0.1em] uppercase mt-0.5" style={{ color: "#64748B" }}>
               Gestión Integral de Procesos
             </div>
           </div>
@@ -548,56 +549,56 @@ function RoleSelect({ onPick }) {
           <button
             onClick={() => onPick("asesor")}
             className="group flex items-center justify-between rounded-lg px-5 py-4 transition-transform active:scale-[0.98]"
-            style={{ background: "#1E2126", border: "1px solid #2A2E35" }}
+            style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}
           >
             <div className="text-left">
-              <div className="font-semibold" style={{ color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}>
+              <div className="font-semibold" style={{ color: "#0F172A", fontFamily: "'Oswald',sans-serif" }}>
                 SOY ASESOR
               </div>
-              <div className="text-xs mt-0.5" style={{ color: "#8A8F98" }}>
+              <div className="text-xs mt-0.5" style={{ color: "#64748B" }}>
                 Registra tus ventas y revisa tu ticket promedio
               </div>
             </div>
-            <ChevronRight size={18} color="#E4002B" />
+            <ChevronRight size={18} color="#2563EB" />
           </button>
 
           <button
             onClick={() => onPick("admin")}
             className="group flex items-center justify-between rounded-lg px-5 py-4 transition-transform active:scale-[0.98]"
-            style={{ background: "#1E2126", border: "1px solid #2A2E35" }}
+            style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}
           >
             <div className="text-left">
-              <div className="font-semibold" style={{ color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}>
+              <div className="font-semibold" style={{ color: "#0F172A", fontFamily: "'Oswald',sans-serif" }}>
                 PANEL ADMINISTRADOR
               </div>
-              <div className="text-xs mt-0.5" style={{ color: "#8A8F98" }}>
+              <div className="text-xs mt-0.5" style={{ color: "#64748B" }}>
                 Reporte global de todo el equipo
               </div>
             </div>
-            <Lock size={16} color="#8A8F98" />
+            <Lock size={16} color="#64748B" />
           </button>
 
           <button
             onClick={() => onPick("cajera")}
             className="group flex items-center justify-between rounded-lg px-5 py-4 transition-transform active:scale-[0.98]"
-            style={{ background: "#1E2126", border: "1px solid #2A2E35" }}
+            style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}
           >
             <div className="text-left">
-              <div className="font-semibold" style={{ color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}>
+              <div className="font-semibold" style={{ color: "#0F172A", fontFamily: "'Oswald',sans-serif" }}>
                 SOY CAJERA
               </div>
-              <div className="text-xs mt-0.5" style={{ color: "#8A8F98" }}>
+              <div className="text-xs mt-0.5" style={{ color: "#64748B" }}>
                 Registro de comprobantes de caja
               </div>
             </div>
-            <ChevronRight size={18} color="#E4002B" />
+            <ChevronRight size={18} color="#2563EB" />
           </button>
         </div>
       </div>
 
       <div className="absolute bottom-3 left-0 right-0 flex flex-col items-center gap-1 px-4">
         <img src={ALBASTUDIO_LOGO_SRC} alt="Soluciones Integrales Econométricas AlbaStudio" style={{ height: 56, width: "auto" }} />
-        <div className="text-center" style={{ color: "#4A4E56", fontSize: "10px", letterSpacing: "0.03em" }}>
+        <div className="text-center" style={{ color: "#94A3B8", fontSize: "10px", letterSpacing: "0.03em" }}>
           Diseñado y ejecutado por Soluciones Integrales Econométricas AlbaStudio&reg;
         </div>
       </div>
@@ -667,14 +668,14 @@ function ChatWidget({ senderName, senderRole }) {
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="fixed bottom-5 right-5 z-40 rounded-full shadow-lg flex items-center justify-center"
-        style={{ width: 56, height: 56, background: "#E4002B", border: "1px solid #ff4d5e" }}
+        style={{ width: 56, height: 56, background: "#2563EB", border: "1px solid #3B82F6" }}
         aria-label="Chat del equipo"
       >
-        {open ? <X size={22} color="#F2F1EC" /> : <MessageCircle size={22} color="#F2F1EC" />}
+        {open ? <X size={22} color="#0F172A" /> : <MessageCircle size={22} color="#0F172A" />}
         {hasNew && !open && (
           <span
             className="absolute top-0 right-0 rounded-full"
-            style={{ width: 12, height: 12, background: "#FFC72C", border: "2px solid #14161A" }}
+            style={{ width: 12, height: 12, background: "#0EA5E9", border: "2px solid #F4F7FB" }}
           />
         )}
       </button>
@@ -682,23 +683,23 @@ function ChatWidget({ senderName, senderRole }) {
       {open && (
         <div
           className="fixed bottom-24 right-5 z-40 rounded-lg flex flex-col overflow-hidden shadow-2xl"
-          style={{ width: "min(360px, calc(100vw - 40px))", height: "min(480px, calc(100vh - 160px))", background: "#1E2126", border: "1px solid #2A2E35" }}
+          style={{ width: "min(360px, calc(100vw - 40px))", height: "min(480px, calc(100vh - 160px))", background: "#FFFFFF", border: "1px solid #E2E8F0" }}
         >
-          <div className="flex items-center justify-between px-4 py-3" style={{ background: "#14161A", borderBottom: "3px solid #E4002B" }}>
+          <div className="flex items-center justify-between px-4 py-3" style={{ background: "#F4F7FB", borderBottom: "3px solid #2563EB" }}>
             <div>
-              <div className="font-semibold uppercase text-xs tracking-[0.1em]" style={{ fontFamily: "'Oswald',sans-serif", color: "#F2F1EC" }}>
+              <div className="font-semibold uppercase text-xs tracking-[0.1em]" style={{ fontFamily: "'Oswald',sans-serif", color: "#0F172A" }}>
                 Chat del equipo
               </div>
-              <div className="text-[10px]" style={{ color: "#8A8F98" }}>Honda Santo Domingo</div>
+              <div className="text-[10px]" style={{ color: "#64748B" }}>Honda Santo Domingo</div>
             </div>
             <button onClick={() => setOpen(false)} aria-label="Cerrar">
-              <X size={16} color="#8A8F98" />
+              <X size={16} color="#64748B" />
             </button>
           </div>
 
           <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-2.5">
             {messages.length === 0 && (
-              <div className="text-xs text-center mt-6" style={{ color: "#8A8F98" }}>
+              <div className="text-xs text-center mt-6" style={{ color: "#64748B" }}>
                 Todavía no hay mensajes. ¡Escribe el primero!
               </div>
             )}
@@ -707,7 +708,7 @@ function ChatWidget({ senderName, senderRole }) {
               return (
                 <div key={m.id} className="flex flex-col" style={{ alignItems: mine ? "flex-end" : "flex-start" }}>
                   {!mine && (
-                    <span className="text-[10px] mb-0.5 px-1" style={{ color: "#8A8F98" }}>
+                    <span className="text-[10px] mb-0.5 px-1" style={{ color: "#64748B" }}>
                       {m.sender} · {m.role}
                     </span>
                   )}
@@ -715,38 +716,38 @@ function ChatWidget({ senderName, senderRole }) {
                     className="rounded-lg px-3 py-2 text-xs"
                     style={{
                       maxWidth: "80%",
-                      background: mine ? "#E4002B" : "#2A2E35",
-                      color: "#F2F1EC",
+                      background: mine ? "#2563EB" : "#E2E8F0",
+                      color: "#0F172A",
                       borderBottomRightRadius: mine ? 2 : undefined,
                       borderBottomLeftRadius: !mine ? 2 : undefined,
                     }}
                   >
                     {m.text}
                   </div>
-                  <span className="text-[9px] mt-0.5 px-1" style={{ color: "#4A4E56" }}>{formatTime(m.ts)}</span>
+                  <span className="text-[9px] mt-0.5 px-1" style={{ color: "#94A3B8" }}>{formatTime(m.ts)}</span>
                 </div>
               );
             })}
           </div>
 
-          <div className="flex items-center gap-2 px-3 py-3" style={{ borderTop: "1px solid #2A2E35" }}>
+          <div className="flex items-center gap-2 px-3 py-3" style={{ borderTop: "1px solid #E2E8F0" }}>
             <input
               value={text}
               onChange={(e) => setText(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
               placeholder="Escribe un mensaje..."
               className="flex-1 rounded-md px-3 py-2 text-xs outline-none"
-              style={{ background: "#14161A", border: "1px solid #2A2E35", color: "#F2F1EC" }}
+              style={{ background: "#F4F7FB", border: "1px solid #E2E8F0", color: "#0F172A" }}
             />
             <button
               type="button"
               onClick={handleSend}
               disabled={!text.trim() || sending}
               className="rounded-md p-2 disabled:opacity-40"
-              style={{ background: "#E4002B" }}
+              style={{ background: "#2563EB" }}
               aria-label="Enviar"
             >
-              <Send size={15} color="#F2F1EC" />
+              <Send size={15} color="#0F172A" />
             </button>
           </div>
         </div>
@@ -865,38 +866,38 @@ function RecordatoriosPanel({ mode, personName, recordatorios, setRecordatorios 
     r.completado && r.completadoFecha && msSinceIso(r.completadoFecha) >= DIAS_PARA_BORRAR * 24 * 60 * 60 * 1000;
 
   const renderItem = (r) => (
-    <div key={r.id} className="rounded-lg px-4 py-3 flex items-start gap-3" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+    <div key={r.id} className="rounded-lg px-4 py-3 flex items-start gap-3" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
       <input type="checkbox" checked={r.completado} onChange={() => toggleCompletado(r.id)} className="mt-1" />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 flex-wrap">
           {r.esDeAdmin && (
             <span
               className="text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0"
-              style={{ background: "#3A1F1F", color: "#FF8A8A", border: "1px solid #E4002B" }}
+              style={{ background: "#FEF2F2", color: "#DC2626", border: "1px solid #DC2626" }}
             >
               Del administrador
             </span>
           )}
           {mode === "admin" && (
-            <span className="text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0" style={{ background: "#14161A", color: "#8A8F98", border: "1px solid #2A2E35" }}>
+            <span className="text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0" style={{ background: "#F4F7FB", color: "#64748B", border: "1px solid #E2E8F0" }}>
               Para: {r.destinatario}
             </span>
           )}
         </div>
-        <div className="text-sm mt-1" style={{ color: r.completado ? "#8A8F98" : "#F2F1EC", textDecoration: r.completado ? "line-through" : "none" }}>
+        <div className="text-sm mt-1" style={{ color: r.completado ? "#64748B" : "#0F172A", textDecoration: r.completado ? "line-through" : "none" }}>
           {r.texto}
         </div>
-        <div className="text-[11px] mt-1" style={{ color: "#8A8F98" }}>
+        <div className="text-[11px] mt-1" style={{ color: "#64748B" }}>
           {r.creadoPor} · {formatDateTime(r.fecha)}
           {r.completado && r.completadoFecha && <> · Completado {formatDateTime(r.completadoFecha)}</>}
         </div>
       </div>
       {puedeBorrar(r) ? (
         <button onClick={() => handleDelete(r.id)} aria-label="Eliminar" className="shrink-0">
-          <Trash2 size={14} color="#8A8F98" />
+          <Trash2 size={14} color="#64748B" />
         </button>
       ) : r.completado ? (
-        <span className="text-[9px] shrink-0" style={{ color: "#4A4E56" }}>
+        <span className="text-[9px] shrink-0" style={{ color: "#94A3B8" }}>
           Se puede borrar en {Math.max(0, DIAS_PARA_BORRAR - Math.floor(msSinceIso(r.completadoFecha) / 86400000))}d
         </span>
       ) : null}
@@ -906,14 +907,14 @@ function RecordatoriosPanel({ mode, personName, recordatorios, setRecordatorios 
   if (mode === "asesor") {
     return (
       <div>
-        <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-1" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
+        <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-1" style={{ color: "#64748B", fontFamily: "'Oswald',sans-serif" }}>
           Mis recordatorios
         </div>
-        <div className="text-[11px] mb-3" style={{ color: "#8A8F98" }}>
+        <div className="text-[11px] mb-3" style={{ color: "#64748B" }}>
           Solo tú ves esta lista. Al marcar uno como hecho, se puede borrar recién después de {DIAS_PARA_BORRAR} días.
         </div>
 
-        <div className="rounded-lg p-4 sm:p-5 mb-4" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+        <div className="rounded-lg p-4 sm:p-5 mb-4" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
           <textarea
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
@@ -923,7 +924,7 @@ function RecordatoriosPanel({ mode, personName, recordatorios, setRecordatorios 
             style={inputStyle}
           />
           {error && (
-            <div className="text-xs rounded-md px-3 py-2 mt-2" style={{ color: "#FFD3D3", background: "#3A1F1F", border: "1px solid #E4002B" }}>
+            <div className="text-xs rounded-md px-3 py-2 mt-2" style={{ color: "#B91C1C", background: "#FEF2F2", border: "1px solid #DC2626" }}>
               {error}
             </div>
           )}
@@ -932,7 +933,7 @@ function RecordatoriosPanel({ mode, personName, recordatorios, setRecordatorios 
             onClick={handleAddPropio}
             disabled={!texto.trim() || saving}
             className="rounded-md py-2.5 px-5 font-semibold uppercase text-xs tracking-[0.08em] flex items-center justify-center gap-2 mt-3 disabled:opacity-50"
-            style={{ background: "#E4002B", color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}
+            style={{ background: "#2563EB", color: "#0F172A", fontFamily: "'Oswald',sans-serif" }}
           >
             {saving ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
             Agregar recordatorio
@@ -940,7 +941,7 @@ function RecordatoriosPanel({ mode, personName, recordatorios, setRecordatorios 
         </div>
 
         {misRecordatorios.length === 0 ? (
-          <div className="text-sm text-center py-8 rounded-lg" style={{ color: "#8A8F98", background: "#1E2126", border: "1px dashed #2A2E35" }}>
+          <div className="text-sm text-center py-8 rounded-lg" style={{ color: "#64748B", background: "#FFFFFF", border: "1px dashed #E2E8F0" }}>
             No tienes recordatorios todavía.
           </div>
         ) : (
@@ -955,14 +956,14 @@ function RecordatoriosPanel({ mode, personName, recordatorios, setRecordatorios 
 
   return (
     <div>
-      <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-1" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
+      <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-1" style={{ color: "#64748B", fontFamily: "'Oswald',sans-serif" }}>
         Recordatorios
       </div>
-      <div className="text-[11px] mb-3" style={{ color: "#8A8F98" }}>
+      <div className="text-[11px] mb-3" style={{ color: "#64748B" }}>
         Envía un recordatorio a un asesor específico — le va a aparecer marcado como nuevo en su pestaña.
       </div>
 
-      <div className="rounded-lg p-4 sm:p-5 mb-4" style={{ background: "#1E2126", border: "1px solid #E4002B" }}>
+      <div className="rounded-lg p-4 sm:p-5 mb-4" style={{ background: "#FFFFFF", border: "1px solid #2563EB" }}>
         <Field label="Para">
           <select value={destinatario} onChange={(e) => setDestinatario(e.target.value)} className="rounded-md px-3 py-2.5 outline-none mb-3" style={inputStyle}>
             {DESTINATARIOS_RECORDATORIO.map((nombre) => (
@@ -979,7 +980,7 @@ function RecordatoriosPanel({ mode, personName, recordatorios, setRecordatorios 
           style={inputStyle}
         />
         {error && (
-          <div className="text-xs rounded-md px-3 py-2 mt-2" style={{ color: "#FFD3D3", background: "#3A1F1F", border: "1px solid #E4002B" }}>
+          <div className="text-xs rounded-md px-3 py-2 mt-2" style={{ color: "#B91C1C", background: "#FEF2F2", border: "1px solid #DC2626" }}>
             {error}
           </div>
         )}
@@ -988,18 +989,18 @@ function RecordatoriosPanel({ mode, personName, recordatorios, setRecordatorios 
           onClick={handleAddParaAsesor}
           disabled={!texto.trim() || saving}
           className="rounded-md py-2.5 px-5 font-semibold uppercase text-xs tracking-[0.08em] flex items-center justify-center gap-2 mt-3 disabled:opacity-50"
-          style={{ background: "#E4002B", color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}
+          style={{ background: "#2563EB", color: "#0F172A", fontFamily: "'Oswald',sans-serif" }}
         >
           {saving ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
           Enviar recordatorio
         </button>
       </div>
 
-      <div className="text-[11px] uppercase tracking-[0.12em] font-medium mb-2" style={{ color: "#8A8F98" }}>
+      <div className="text-[11px] uppercase tracking-[0.12em] font-medium mb-2" style={{ color: "#64748B" }}>
         Todos los recordatorios
       </div>
       {todosOrdenados.length === 0 ? (
-        <div className="text-sm text-center py-8 rounded-lg" style={{ color: "#8A8F98", background: "#1E2126", border: "1px dashed #2A2E35" }}>
+        <div className="text-sm text-center py-8 rounded-lg" style={{ color: "#64748B", background: "#FFFFFF", border: "1px dashed #E2E8F0" }}>
           No hay recordatorios todavía.
         </div>
       ) : (
@@ -1117,14 +1118,14 @@ function CRMPanel({ personName, crm, setCrm }) {
 
   return (
     <div>
-      <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-1" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
+      <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-1" style={{ color: "#64748B", fontFamily: "'Oswald',sans-serif" }}>
         CRM · Prospectos
       </div>
-      <div className="text-[11px] mb-3" style={{ color: "#8A8F98" }}>
+      <div className="text-[11px] mb-3" style={{ color: "#64748B" }}>
         Solo tú ves tus prospectos. Anota la gestión de cada cliente y cuándo darle seguimiento.
       </div>
 
-      <div className="rounded-lg p-4 sm:p-5 mb-4" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+      <div className="rounded-lg p-4 sm:p-5 mb-4" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Nombre">
             <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nombre completo" className="rounded-md px-3 py-2.5 outline-none" style={inputStyle} />
@@ -1148,7 +1149,7 @@ function CRMPanel({ personName, crm, setCrm }) {
         </div>
 
         <div className="mt-3">
-          <span className="text-[11px] uppercase tracking-[0.1em] font-medium" style={{ color: "#8A8F98" }}>Temperatura de venta</span>
+          <span className="text-[11px] uppercase tracking-[0.1em] font-medium" style={{ color: "#64748B" }}>Temperatura de venta</span>
           <div className="flex gap-2 mt-1.5">
             {TEMPERATURAS.map((t) => (
               <button
@@ -1157,9 +1158,9 @@ function CRMPanel({ personName, crm, setCrm }) {
                 onClick={() => setTemperatura(t.key)}
                 className="flex-1 rounded-md py-2 text-xs font-semibold uppercase tracking-[0.06em] transition-colors"
                 style={{
-                  background: temperatura === t.key ? t.color : "#14161A",
-                  color: temperatura === t.key ? "#14161A" : "#8A8F98",
-                  border: `1px solid ${temperatura === t.key ? t.color : "#2A2E35"}`,
+                  background: temperatura === t.key ? t.color : "#F4F7FB",
+                  color: temperatura === t.key ? "#F4F7FB" : "#64748B",
+                  border: `1px solid ${temperatura === t.key ? t.color : "#E2E8F0"}`,
                 }}
               >
                 {t.key}
@@ -1175,7 +1176,7 @@ function CRMPanel({ personName, crm, setCrm }) {
         </div>
 
         {error && (
-          <div className="text-xs rounded-md px-3 py-2 mt-3" style={{ color: "#FFD3D3", background: "#3A1F1F", border: "1px solid #E4002B" }}>
+          <div className="text-xs rounded-md px-3 py-2 mt-3" style={{ color: "#B91C1C", background: "#FEF2F2", border: "1px solid #DC2626" }}>
             {error}
           </div>
         )}
@@ -1185,7 +1186,7 @@ function CRMPanel({ personName, crm, setCrm }) {
           onClick={handleAdd}
           disabled={!nombre.trim() || !telefono.trim() || saving}
           className="rounded-md py-2.5 px-5 font-semibold uppercase text-xs tracking-[0.08em] flex items-center justify-center gap-2 mt-3 disabled:opacity-50"
-          style={{ background: "#E4002B", color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}
+          style={{ background: "#2563EB", color: "#0F172A", fontFamily: "'Oswald',sans-serif" }}
         >
           {saving ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
           Agregar prospecto
@@ -1210,7 +1211,7 @@ function CRMPanel({ personName, crm, setCrm }) {
       )}
 
       {prospectosFiltrados.length === 0 ? (
-        <div className="text-sm text-center py-8 rounded-lg" style={{ color: "#8A8F98", background: "#1E2126", border: "1px dashed #2A2E35" }}>
+        <div className="text-sm text-center py-8 rounded-lg" style={{ color: "#64748B", background: "#FFFFFF", border: "1px dashed #E2E8F0" }}>
           {misProspectos.length === 0 ? "No tienes prospectos todavía." : "Ningún prospecto coincide con este filtro."}
         </div>
       ) : (
@@ -1220,7 +1221,7 @@ function CRMPanel({ personName, crm, setCrm }) {
             const vencida = p.proximaGestion && p.proximaGestion <= hoy;
             const expanded = expandedId === p.id;
             return (
-              <div key={p.id} className="rounded-lg overflow-hidden" style={{ background: "#1E2126", border: `1px solid ${vencida ? "#E4002B" : "#2A2E35"}` }}>
+              <div key={p.id} className="rounded-lg overflow-hidden" style={{ background: "#FFFFFF", border: `1px solid ${vencida ? "#DC2626" : "#E2E8F0"}` }}>
                 <button
                   type="button"
                   onClick={() => setExpandedId(expanded ? null : p.id)}
@@ -1228,29 +1229,29 @@ function CRMPanel({ personName, crm, setCrm }) {
                 >
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-medium" style={{ color: "#F2F1EC" }}>{p.nombre}</span>
+                      <span className="text-sm font-medium" style={{ color: "#0F172A" }}>{p.nombre}</span>
                       <span
                         className="text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0 font-semibold"
-                        style={{ background: temp.color, color: "#14161A" }}
+                        style={{ background: temp.color, color: "#F4F7FB" }}
                       >
                         {p.temperatura}
                       </span>
                     </div>
-                    <div className="text-[11px] mt-0.5" style={{ color: "#8A8F98" }}>
+                    <div className="text-[11px] mt-0.5" style={{ color: "#64748B" }}>
                       {p.telefono}{p.identificacion ? ` · ${p.identificacion}` : ""} · {p.modeloInteres || "Sin modelo"} · {p.metodoPago}
                     </div>
                     {p.proximaGestion && (
-                      <div className="text-[11px] mt-0.5 font-medium" style={{ color: vencida ? "#FF8A8A" : "#8A8F98" }}>
+                      <div className="text-[11px] mt-0.5 font-medium" style={{ color: vencida ? "#DC2626" : "#64748B" }}>
                         {vencida ? "Gestión pendiente · " : "Próxima gestión: "}
                         {p.proximaGestion}
                       </div>
                     )}
                   </div>
-                  <span className="text-xs shrink-0" style={{ color: "#8A8F98" }}>{expanded ? "▲" : "▼"}</span>
+                  <span className="text-xs shrink-0" style={{ color: "#64748B" }}>{expanded ? "▲" : "▼"}</span>
                 </button>
 
                 {expanded && (
-                  <div className="px-4 py-3" style={{ background: "#181a1f", borderTop: "1px solid #2A2E35" }}>
+                  <div className="px-4 py-3" style={{ background: "#F1F5F9", borderTop: "1px solid #E2E8F0" }}>
                     <div className="flex items-end gap-2 mb-3">
                       <Field label="Actualizar próxima gestión">
                         <input
@@ -1265,23 +1266,23 @@ function CRMPanel({ personName, crm, setCrm }) {
                         type="button"
                         onClick={() => handleUpdateProxima(p.id)}
                         className="rounded-md px-3 py-2 text-xs font-semibold uppercase"
-                        style={{ background: "#2A2E35", color: "#F2F1EC" }}
+                        style={{ background: "#E2E8F0", color: "#0F172A" }}
                       >
                         Guardar
                       </button>
                     </div>
 
-                    <div className="text-[11px] uppercase tracking-[0.1em] font-medium mb-2" style={{ color: "#8A8F98" }}>
+                    <div className="text-[11px] uppercase tracking-[0.1em] font-medium mb-2" style={{ color: "#64748B" }}>
                       Historial de gestión
                     </div>
                     {(p.gestiones || []).length === 0 ? (
-                      <div className="text-xs mb-3" style={{ color: "#8A8F98" }}>Sin comentarios todavía.</div>
+                      <div className="text-xs mb-3" style={{ color: "#64748B" }}>Sin comentarios todavía.</div>
                     ) : (
                       <div className="flex flex-col gap-2 mb-3">
                         {[...p.gestiones].reverse().map((g) => (
-                          <div key={g.id} className="rounded-md px-3 py-2" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
-                            <div className="text-xs" style={{ color: "#F2F1EC" }}>{g.texto}</div>
-                            <div className="text-[10px] mt-1" style={{ color: "#8A8F98" }}>{formatDateTime(g.fecha)}</div>
+                          <div key={g.id} className="rounded-md px-3 py-2" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
+                            <div className="text-xs" style={{ color: "#0F172A" }}>{g.texto}</div>
+                            <div className="text-[10px] mt-1" style={{ color: "#64748B" }}>{formatDateTime(g.fecha)}</div>
                           </div>
                         ))}
                       </div>
@@ -1301,12 +1302,12 @@ function CRMPanel({ personName, crm, setCrm }) {
                         onClick={() => handleAddComentario(p.id)}
                         disabled={!(comentarioTexto[p.id] || "").trim()}
                         className="rounded-md px-4 py-2 text-xs font-semibold uppercase tracking-[0.06em] disabled:opacity-50"
-                        style={{ background: "#E4002B", color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}
+                        style={{ background: "#2563EB", color: "#0F172A", fontFamily: "'Oswald',sans-serif" }}
                       >
                         Agregar comentario
                       </button>
                       <button onClick={() => handleDelete(p.id)} aria-label="Eliminar prospecto">
-                        <Trash2 size={14} color="#8A8F98" />
+                        <Trash2 size={14} color="#64748B" />
                       </button>
                     </div>
                   </div>
@@ -1321,6 +1322,13 @@ function CRMPanel({ personName, crm, setCrm }) {
 }
 
 // ---------- asesor view ----------
+const ASESOR_NAV = [
+  { key: "registro", label: "Registro", icon: LayoutGrid },
+  { key: "proyecciones", label: "Proyecciones", icon: TrendingUp },
+  { key: "recordatorios", label: "Recordatorios", icon: Bell },
+  { key: "crm", label: "CRM", icon: Users },
+];
+
 function AsesorView({ onExit }) {
   const [name, setName] = useState("");
   const [nameConfirmed, setNameConfirmed] = useState(false);
@@ -1578,22 +1586,22 @@ function AsesorView({ onExit }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#14161A" }}>
-        <Loader2 className="animate-spin" color="#E4002B" size={28} />
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#F4F7FB" }}>
+        <Loader2 className="animate-spin" color="#2563EB" size={28} />
       </div>
     );
   }
 
   if (!nameConfirmed) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-5" style={{ background: "#14161A" }}>
+      <div className="min-h-screen flex items-center justify-center px-5" style={{ background: "#F4F7FB" }}>
         <div className="w-full max-w-sm">
           <div className="text-center mb-6">
             <HondaLogo size={40} className="mx-auto mb-3" />
-            <div className="font-semibold uppercase tracking-[0.1em]" style={{ fontFamily: "'Oswald',sans-serif", color: "#F2F1EC" }}>
+            <div className="font-semibold uppercase tracking-[0.1em]" style={{ fontFamily: "'Oswald',sans-serif", color: "#0F172A" }}>
               Iniciar sesión
             </div>
-            <div className="text-xs mt-1" style={{ color: "#8A8F98" }}>
+            <div className="text-xs mt-1" style={{ color: "#64748B" }}>
               Ingresa con tu usuario de asesor
             </div>
           </div>
@@ -1634,11 +1642,11 @@ function AsesorView({ onExit }) {
             onClick={doLogin}
             disabled={!clave}
             className="w-full rounded-md py-3 font-semibold uppercase text-sm tracking-[0.08em] disabled:opacity-40 mt-4"
-            style={{ background: "#E4002B", color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}
+            style={{ background: "#2563EB", color: "#0F172A", fontFamily: "'Oswald',sans-serif" }}
           >
             Ingresar
           </button>
-          <button onClick={onExit} className="w-full text-center text-xs mt-4" style={{ color: "#8A8F98" }}>
+          <button onClick={onExit} className="w-full text-center text-xs mt-4" style={{ color: "#64748B" }}>
             Volver
           </button>
         </div>
@@ -1647,91 +1655,57 @@ function AsesorView({ onExit }) {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: "#14161A" }}>
+    <div className="min-h-screen" style={{ background: "#F4F7FB" }}>
       <TopBar title={`Asesor · ${name}`} onExit={handleLogout} />
       <ChatWidget senderName={name} senderRole="Asesor" />
       <div className="max-w-lg lg:max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-6">
         {!storageOk && (
-          <div className="rounded-lg px-4 py-3 text-xs" style={{ background: "#3A1F1F", border: "1px solid #E4002B", color: "#FFD3D3" }}>
+          <div className="rounded-lg px-4 py-3 text-xs" style={{ background: "#FEF2F2", border: "1px solid #DC2626", color: "#B91C1C" }}>
             No se detecta guardado en este momento. Cierra y vuelve a abrir la app; si sigue igual, avísale a Alejandro.
           </div>
         )}
 
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setAsesorTab("registro")}
-            className="flex-1 min-w-[130px] rounded-lg py-3 font-semibold uppercase text-xs tracking-[0.1em] transition-colors"
-            style={{
-              fontFamily: "'Oswald',sans-serif",
-              background: asesorTab === "registro" ? "#E4002B" : "#1E2126",
-              color: asesorTab === "registro" ? "#F2F1EC" : "#8A8F98",
-              border: `1px solid ${asesorTab === "registro" ? "#E4002B" : "#2A2E35"}`,
-            }}
-          >
-            Registro
-          </button>
-          <button
-            type="button"
-            onClick={() => setAsesorTab("proyecciones")}
-            className="flex-1 min-w-[130px] rounded-lg py-3 font-semibold uppercase text-xs tracking-[0.1em] transition-colors"
-            style={{
-              fontFamily: "'Oswald',sans-serif",
-              background: asesorTab === "proyecciones" ? "#E4002B" : "#1E2126",
-              color: asesorTab === "proyecciones" ? "#F2F1EC" : "#8A8F98",
-              border: `1px solid ${asesorTab === "proyecciones" ? "#E4002B" : "#2A2E35"}`,
-            }}
-          >
-            Proyecciones
-          </button>
-          <button
-            type="button"
-            onClick={() => setAsesorTab("recordatorios")}
-            className="flex-1 min-w-[130px] rounded-lg py-3 font-semibold uppercase text-xs tracking-[0.1em] transition-colors relative"
-            style={{
-              fontFamily: "'Oswald',sans-serif",
-              background: asesorTab === "recordatorios" ? "#E4002B" : "#1E2126",
-              color: asesorTab === "recordatorios" ? "#F2F1EC" : "#8A8F98",
-              border: `1px solid ${asesorTab === "recordatorios" ? "#E4002B" : "#2A2E35"}`,
-            }}
-          >
-            Recordatorios
-            {recordatorios.some((r) => r.destinatario === name && r.esDeAdmin && !r.leido) && (
-              <span
-                className="absolute rounded-full"
-                style={{ top: 6, right: 8, width: 9, height: 9, background: "#FFC72C", border: "1.5px solid #14161A" }}
-              />
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={() => setAsesorTab("crm")}
-            className="flex-1 min-w-[130px] rounded-lg py-3 font-semibold uppercase text-xs tracking-[0.1em] transition-colors relative"
-            style={{
-              fontFamily: "'Oswald',sans-serif",
-              background: asesorTab === "crm" ? "#E4002B" : "#1E2126",
-              color: asesorTab === "crm" ? "#F2F1EC" : "#8A8F98",
-              border: `1px solid ${asesorTab === "crm" ? "#E4002B" : "#2A2E35"}`,
-            }}
-          >
-            CRM
-            {crm.some((p) => p.asesor === name && p.proximaGestion && p.proximaGestion <= todayISO()) && (
-              <span
-                className="absolute rounded-full"
-                style={{ top: 6, right: 8, width: 9, height: 9, background: "#E4002B", border: "1.5px solid #14161A" }}
-              />
-            )}
-          </button>
+          {ASESOR_NAV.map((item) => {
+            const Icon = item.icon;
+            const active = asesorTab === item.key;
+            const showBadge =
+              (item.key === "recordatorios" && recordatorios.some((r) => r.destinatario === name && r.esDeAdmin && !r.leido)) ||
+              (item.key === "crm" && crm.some((p) => p.asesor === name && p.proximaGestion && p.proximaGestion <= todayISO()));
+            return (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => setAsesorTab(item.key)}
+                className="flex-1 min-w-[130px] rounded-lg py-3 font-semibold uppercase text-xs tracking-[0.1em] transition-colors relative flex items-center justify-center gap-2"
+                style={{
+                  fontFamily: "'Oswald',sans-serif",
+                  background: active ? "#2563EB" : "#FFFFFF",
+                  color: active ? "#FFFFFF" : "#64748B",
+                  border: `1px solid ${active ? "#2563EB" : "#E2E8F0"}`,
+                }}
+              >
+                <Icon size={14} />
+                {item.label}
+                {showBadge && (
+                  <span
+                    className="absolute rounded-full"
+                    style={{ top: 6, right: 8, width: 9, height: 9, background: "#DC2626", border: "1.5px solid #FFFFFF" }}
+                  />
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {asesorTab === "registro" && (
         <>
         {(budgetUnits > 0 || budgetDollars > 0) && (
-          <div className="rounded-lg p-4 sm:p-5" style={{ background: "#1E2126", border: "1px solid #E4002B" }}>
-            <div className="font-semibold uppercase text-xs tracking-[0.14em] mb-1" style={{ color: "#E4002B", fontFamily: "'Oswald',sans-serif" }}>
+          <div className="rounded-lg p-4 sm:p-5" style={{ background: "#FFFFFF", border: "1px solid #2563EB" }}>
+            <div className="font-semibold uppercase text-xs tracking-[0.14em] mb-1" style={{ color: "#2563EB", fontFamily: "'Oswald',sans-serif" }}>
               Mi presupuesto · {monthLabel(monthKey)}
             </div>
-            <div className="text-[11px] mb-3" style={{ color: "#8A8F98" }}>
+            <div className="text-[11px] mb-3" style={{ color: "#64748B" }}>
               Presupuesto total del equipo dividido entre {ASESORES.length} asesores
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1764,27 +1738,27 @@ function AsesorView({ onExit }) {
         <div className="grid grid-cols-2 gap-3">
           <div
             className="rounded-lg p-4 flex flex-col justify-center gap-1.5 relative overflow-hidden"
-            style={{ background: "#1E2126", border: "1px solid #2A2E35" }}
+            style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}
           >
-            <div className="absolute left-0 top-0 bottom-0 w-1" style={{ background: "#E4002B" }} />
-            <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#8A8F98" }}>
+            <div className="absolute left-0 top-0 bottom-0 w-1" style={{ background: "#2563EB" }} />
+            <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#64748B" }}>
               {MESES[new Date().getMonth()]}
             </span>
-            <span className="text-[13px] leading-snug italic" style={{ color: "#F2F1EC", fontFamily: "'Inter',sans-serif" }}>
+            <span className="text-[13px] leading-snug italic" style={{ color: "#0F172A", fontFamily: "'Inter',sans-serif" }}>
               “{motivationalPhrase()}”
             </span>
           </div>
-          <div className="rounded-lg p-4 flex flex-col justify-center gap-1" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
-            <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#8A8F98" }}>
+          <div className="rounded-lg p-4 flex flex-col justify-center gap-1" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
+            <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#64748B" }}>
               Total vendido
             </span>
-            <span className="font-mono font-semibold text-xl" style={{ color: "#F2F1EC" }}>
+            <span className="font-mono font-semibold text-xl" style={{ color: "#0F172A" }}>
               {money(myTotal / 1.15)}
             </span>
-            <span className="text-xs mt-1" style={{ color: "#8A8F98" }}>
+            <span className="text-xs mt-1" style={{ color: "#64748B" }}>
               {myMotoSales.length} {myMotoSales.length === 1 ? "venta" : "ventas"}
             </span>
-            <span className="text-[10px] mt-1" style={{ color: "#8A8F98" }}>
+            <span className="text-[10px] mt-1" style={{ color: "#64748B" }}>
               {daysLeftInMonth() === 0 ? "Último día del mes" : `${daysLeftInMonth()} ${daysLeftInMonth() === 1 ? "día" : "días"} para cerrar el mes`}
             </span>
           </div>
@@ -1792,9 +1766,9 @@ function AsesorView({ onExit }) {
 
         <div
           className="rounded-lg p-4 sm:p-5 flex flex-col gap-3.5"
-          style={{ background: "#1E2126", border: "1px solid #2A2E35" }}
+          style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}
         >
-          <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-1" style={{ color: "#E4002B", fontFamily: "'Oswald',sans-serif" }}>
+          <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-1" style={{ color: "#2563EB", fontFamily: "'Oswald',sans-serif" }}>
             Nueva venta
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -1858,12 +1832,12 @@ function AsesorView({ onExit }) {
           </Field>
 
           {error && (
-            <div className="text-xs rounded-md px-3 py-2" style={{ color: "#FFD3D3", background: "#3A1F1F", border: "1px solid #E4002B" }}>
+            <div className="text-xs rounded-md px-3 py-2" style={{ color: "#B91C1C", background: "#FEF2F2", border: "1px solid #DC2626" }}>
               {error}
             </div>
           )}
           {justSaved && (
-            <div className="text-xs rounded-md px-3 py-2" style={{ color: "#D9F7D9", background: "#1F3A22", border: "1px solid #2E7D32" }}>
+            <div className="text-xs rounded-md px-3 py-2" style={{ color: "#D9F7D9", background: "#1F3A22", border: "1px solid #16A34A" }}>
               Venta registrada correctamente.
             </div>
           )}
@@ -1873,7 +1847,7 @@ function AsesorView({ onExit }) {
             onClick={submitSale}
             disabled={saving}
             className="rounded-md py-3 font-semibold uppercase text-sm tracking-[0.08em] flex items-center justify-center gap-2 disabled:opacity-50"
-            style={{ background: "#E4002B", color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}
+            style={{ background: "#2563EB", color: "#0F172A", fontFamily: "'Oswald',sans-serif" }}
           >
             {saving ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
             Registrar venta
@@ -1882,11 +1856,11 @@ function AsesorView({ onExit }) {
 
 
         <div>
-          <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-3" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
+          <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-3" style={{ color: "#64748B", fontFamily: "'Oswald',sans-serif" }}>
             Mis ventas
           </div>
           {mySales.length === 0 ? (
-            <div className="text-sm text-center py-8 rounded-lg" style={{ color: "#8A8F98", background: "#1E2126", border: "1px dashed #2A2E35" }}>
+            <div className="text-sm text-center py-8 rounded-lg" style={{ color: "#64748B", background: "#FFFFFF", border: "1px dashed #E2E8F0" }}>
               Aún no has registrado ventas.
             </div>
           ) : (
@@ -1895,16 +1869,16 @@ function AsesorView({ onExit }) {
                 <div
                   key={s.id}
                   className="rounded-lg overflow-hidden"
-                  style={{ background: "#1E2126", border: "1px solid #2A2E35" }}
+                  style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}
                 >
                 <div
                   className="px-4 py-3 flex items-center justify-between gap-3"
                 >
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2 text-sm font-medium" style={{ color: "#F2F1EC" }}>
+                    <div className="flex items-center gap-2 text-sm font-medium" style={{ color: "#0F172A" }}>
                       <span
                         className="shrink-0 font-mono text-[10px] px-1.5 py-0.5 rounded"
-                        style={{ background: "#14161A", color: "#8A8F98", border: "1px solid #2A2E35" }}
+                        style={{ background: "#F4F7FB", color: "#64748B", border: "1px solid #E2E8F0" }}
                       >
                         #{mySalesNumberById[s.id]}
                       </span>
@@ -1912,30 +1886,30 @@ function AsesorView({ onExit }) {
                       {!isMoto(s) && (
                         <span
                           className="text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0"
-                          style={{ background: "#3A2E1F", color: "#FFC72C", border: "1px solid #FFC72C" }}
+                          style={{ background: "#FFF7ED", color: "#C2410C", border: "1px solid #FDBA74" }}
                         >
                           Prod. fuerza
                         </span>
                       )}
                     </div>
-                    <div className="text-xs mt-0.5" style={{ color: "#8A8F98" }}>
+                    <div className="text-xs mt-0.5" style={{ color: "#64748B" }}>
                       #{s.factura} · {s.cliente} · {s.fecha}
                     </div>
-                    <div className="text-[11px] mt-0.5" style={{ color: "#8A8F98" }}>
+                    <div className="text-[11px] mt-0.5" style={{ color: "#64748B" }}>
                       {s.formaPago} · {s.origen}
                     </div>
                     {s.observaciones && (
-                      <div className="text-[11px] mt-1 italic" style={{ color: "#C9CDD3" }}>
+                      <div className="text-[11px] mt-1 italic" style={{ color: "#475569" }}>
                         “{s.observaciones}”
                       </div>
                     )}
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
-                    <span className="font-mono font-semibold text-sm" style={{ color: "#FFC72C" }}>
+                    <span className="font-mono font-semibold text-sm" style={{ color: "#0EA5E9" }}>
                       {money(s.valor)}
                     </span>
                     <button onClick={() => deleteSale(s.id)} aria-label="Eliminar">
-                      <Trash2 size={15} color="#8A8F98" />
+                      <Trash2 size={15} color="#64748B" />
                     </button>
                   </div>
                 </div>
@@ -1946,18 +1920,18 @@ function AsesorView({ onExit }) {
                       type="button"
                       onClick={() => setExpandedEntrega((prev) => ({ ...prev, [s.id]: !prev[s.id] }))}
                       className="w-full flex items-center justify-between px-4 py-2 text-xs"
-                      style={{ background: "#181a1f", borderTop: "1px solid #2A2E35", color: "#8A8F98" }}
+                      style={{ background: "#F1F5F9", borderTop: "1px solid #E2E8F0", color: "#64748B" }}
                     >
                       <span>
                         Progreso de entrega ·{" "}
-                        <span style={{ color: entregaProgress(s).done === entregaProgress(s).total ? "#8FD98F" : "#FFC72C" }}>
+                        <span style={{ color: entregaProgress(s).done === entregaProgress(s).total ? "#16A34A" : "#0EA5E9" }}>
                           {entregaProgress(s).done}/{entregaProgress(s).total}
                         </span>
                       </span>
                       <span>{expandedEntrega[s.id] ? "▲" : "▼"}</span>
                     </button>
                     {expandedEntrega[s.id] && (
-                      <div className="px-4 py-3 flex flex-col gap-2.5" style={{ background: "#181a1f", borderTop: "1px solid #2A2E35" }}>
+                      <div className="px-4 py-3 flex flex-col gap-2.5" style={{ background: "#F1F5F9", borderTop: "1px solid #E2E8F0" }}>
                         {ENTREGA_PASOS.map((paso, i) => {
                           const checked = !!(s.entrega && s.entrega[paso.key]);
                           const fecha = s.entrega && s.entrega[`${paso.key}Fecha`];
@@ -1970,11 +1944,11 @@ function AsesorView({ onExit }) {
                                 className="mt-0.5"
                               />
                               <span className="flex-1">
-                                <span style={{ color: checked ? "#8FD98F" : "#C9CDD3" }}>
+                                <span style={{ color: checked ? "#16A34A" : "#475569" }}>
                                   {i + 1}. {paso.label}
                                 </span>
                                 {paso.auto && checked && fecha && (
-                                  <span className="block text-[10px] mt-0.5" style={{ color: "#8A8F98" }}>
+                                  <span className="block text-[10px] mt-0.5" style={{ color: "#64748B" }}>
                                     {formatDateTime(fecha)}
                                   </span>
                                 )}
@@ -1997,23 +1971,23 @@ function AsesorView({ onExit }) {
         {asesorTab === "proyecciones" && (
         <>
         <div>
-          <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-1" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
+          <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-1" style={{ color: "#64748B", fontFamily: "'Oswald',sans-serif" }}>
             Proyecciones · ventas en proceso
           </div>
-          <div className="text-[11px] mb-3" style={{ color: "#8A8F98" }}>
+          <div className="text-[11px] mb-3" style={{ color: "#64748B" }}>
             Anota aquí tus ventas calientes o en proceso, aún no facturadas. Esto no afecta tus ventas registradas.
           </div>
 
           {proyeccionError && (
-            <div className="text-xs rounded-md px-3 py-2 mb-3" style={{ color: "#FFD3D3", background: "#3A1F1F", border: "1px solid #E4002B" }}>
+            <div className="text-xs rounded-md px-3 py-2 mb-3" style={{ color: "#B91C1C", background: "#FEF2F2", border: "1px solid #DC2626" }}>
               {proyeccionError}
             </div>
           )}
 
-          <div className="overflow-x-auto rounded-lg" style={{ border: "1px solid #2A2E35" }}>
+          <div className="overflow-x-auto rounded-lg" style={{ border: "1px solid #E2E8F0" }}>
             <table className="text-xs" style={{ width: "100%", minWidth: 640 }}>
               <thead>
-                <tr style={{ background: "#1E2126", color: "#8A8F98" }}>
+                <tr style={{ background: "#FFFFFF", color: "#64748B" }}>
                   <th className="text-left font-medium uppercase tracking-wide px-2 py-2.5">Cliente</th>
                   <th className="text-left font-medium uppercase tracking-wide px-2 py-2.5">Identificación</th>
                   <th className="text-left font-medium uppercase tracking-wide px-2 py-2.5">Modelo</th>
@@ -2025,7 +1999,7 @@ function AsesorView({ onExit }) {
               </thead>
               <tbody>
                 {myProyecciones.map((p, i) => (
-                  <tr key={p.id} style={{ background: i % 2 ? "#1a1d22" : "#1E2126" }}>
+                  <tr key={p.id} style={{ background: i % 2 ? "#F8FAFC" : "#FFFFFF" }}>
                     <td className="px-2 py-1.5">
                       <input
                         value={p.cliente}
@@ -2033,7 +2007,7 @@ function AsesorView({ onExit }) {
                         onBlur={() => commitProyeccion(p.id)}
                         placeholder="Nombre completo"
                         className="rounded px-1.5 py-1.5 outline-none text-xs"
-                        style={{ background: "transparent", border: "none", color: "#F2F1EC", width: "100%" }}
+                        style={{ background: "transparent", border: "none", color: "#0F172A", width: "100%" }}
                       />
                     </td>
                     <td className="px-2 py-1.5">
@@ -2043,7 +2017,7 @@ function AsesorView({ onExit }) {
                         onBlur={() => commitProyeccion(p.id)}
                         placeholder="Cédula/RUC"
                         className="rounded px-1.5 py-1.5 outline-none text-xs"
-                        style={{ background: "transparent", border: "none", color: "#F2F1EC", width: "100%" }}
+                        style={{ background: "transparent", border: "none", color: "#0F172A", width: "100%" }}
                       />
                     </td>
                     <td className="px-2 py-1.5">
@@ -2053,7 +2027,7 @@ function AsesorView({ onExit }) {
                         onBlur={() => commitProyeccion(p.id)}
                         placeholder="Ej. Honda CB 190R"
                         className="rounded px-1.5 py-1.5 outline-none text-xs"
-                        style={{ background: "transparent", border: "none", color: "#F2F1EC", width: "100%" }}
+                        style={{ background: "transparent", border: "none", color: "#0F172A", width: "100%" }}
                       />
                     </td>
                     <td className="px-2 py-1.5">
@@ -2062,10 +2036,10 @@ function AsesorView({ onExit }) {
                         onChange={(e) => updateProyeccion(p.id, "formaPago", e.target.value)}
                         onBlur={() => commitProyeccion(p.id)}
                         className="rounded px-1.5 py-1.5 outline-none text-xs"
-                        style={{ background: "transparent", border: "none", color: "#F2F1EC", width: "100%" }}
+                        style={{ background: "transparent", border: "none", color: "#0F172A", width: "100%" }}
                       >
                         {FORMAS_PAGO.map((f) => (
-                          <option key={f} value={f} style={{ background: "#1E2126" }}>{f}</option>
+                          <option key={f} value={f} style={{ background: "#FFFFFF" }}>{f}</option>
                         ))}
                       </select>
                     </td>
@@ -2076,7 +2050,7 @@ function AsesorView({ onExit }) {
                         onBlur={() => commitProyeccion(p.id)}
                         placeholder="Ej. Esperando aprobación de crédito"
                         className="rounded px-1.5 py-1.5 outline-none text-xs"
-                        style={{ background: "transparent", border: "none", color: "#F2F1EC", width: "100%" }}
+                        style={{ background: "transparent", border: "none", color: "#0F172A", width: "100%" }}
                       />
                     </td>
                     <td className="px-2 py-1.5">
@@ -2087,19 +2061,19 @@ function AsesorView({ onExit }) {
                         onChange={(e) => updateProyeccion(p.id, "valor", e.target.value)}
                         onBlur={() => commitProyeccion(p.id)}
                         className="rounded px-1.5 py-1.5 outline-none text-xs text-right"
-                        style={{ background: "transparent", border: "none", color: "#FFC72C", width: "100%" }}
+                        style={{ background: "transparent", border: "none", color: "#0EA5E9", width: "100%" }}
                       />
                     </td>
                     <td className="px-2 py-1.5 text-center">
                       <button onClick={() => deleteProyeccion(p.id)} aria-label="Eliminar">
-                        <Trash2 size={14} color="#8A8F98" />
+                        <Trash2 size={14} color="#64748B" />
                       </button>
                     </td>
                   </tr>
                 ))}
                 {myProyecciones.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="text-center py-8 text-xs" style={{ color: "#8A8F98" }}>
+                    <td colSpan={6} className="text-center py-8 text-xs" style={{ color: "#64748B" }}>
                       Aún no tienes proyecciones registradas.
                     </td>
                   </tr>
@@ -2112,39 +2086,39 @@ function AsesorView({ onExit }) {
             type="button"
             onClick={addProyeccion}
             className="rounded-md py-3 font-semibold uppercase text-sm tracking-[0.08em] flex items-center justify-center gap-2 mt-3 px-5"
-            style={{ background: "#E4002B", color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}
+            style={{ background: "#2563EB", color: "#0F172A", fontFamily: "'Oswald',sans-serif" }}
           >
             <Plus size={16} />
             Agregar proyección
           </button>
         </div>
 
-        <div className="rounded-lg p-4 sm:p-5" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+        <div className="rounded-lg p-4 sm:p-5" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
           <div className="flex items-center justify-between text-xs mb-1.5">
-            <span style={{ color: "#8A8F98" }}>Total vendido (facturado)</span>
-            <span className="font-mono" style={{ color: "#F2F1EC" }}>{money(myTotal / 1.15)}</span>
+            <span style={{ color: "#64748B" }}>Total vendido (facturado)</span>
+            <span className="font-mono" style={{ color: "#0F172A" }}>{money(myTotal / 1.15)}</span>
           </div>
           <div className="flex items-center justify-between text-xs mb-1.5">
-            <span style={{ color: "#8A8F98" }}>+ Total en proyecciones</span>
-            <span className="font-mono" style={{ color: "#F2F1EC" }}>{money(totalProyecciones)}</span>
+            <span style={{ color: "#64748B" }}>+ Total en proyecciones</span>
+            <span className="font-mono" style={{ color: "#0F172A" }}>{money(totalProyecciones)}</span>
           </div>
-          <div className="flex items-center justify-between text-sm mt-2 pt-2" style={{ borderTop: "1px solid #2A2E35" }}>
-            <span className="font-medium" style={{ color: "#F2F1EC" }}>Si facturas todo</span>
-            <span className="font-mono font-bold text-lg" style={{ color: "#FFC72C" }}>{money(sumaProyectada)}</span>
+          <div className="flex items-center justify-between text-sm mt-2 pt-2" style={{ borderTop: "1px solid #E2E8F0" }}>
+            <span className="font-medium" style={{ color: "#0F172A" }}>Si facturas todo</span>
+            <span className="font-mono font-bold text-lg" style={{ color: "#0EA5E9" }}>{money(sumaProyectada)}</span>
           </div>
           {pctProyectado !== null && (
             <div className="mt-3">
-              <div className="w-full h-2.5 rounded-full overflow-hidden" style={{ background: "#14161A", border: "1px solid #2A2E35" }}>
+              <div className="w-full h-2.5 rounded-full overflow-hidden" style={{ background: "#F4F7FB", border: "1px solid #E2E8F0" }}>
                 <div
                   className="h-full rounded-full transition-all"
                   style={{
                     width: `${Math.min(100, Math.max(0, pctProyectado))}%`,
-                    background: pctProyectado >= 100 ? "#2E7D32" : pctProyectado >= 70 ? "#FFC72C" : "#E4002B",
+                    background: pctProyectado >= 100 ? "#16A34A" : pctProyectado >= 70 ? "#0EA5E9" : "#2563EB",
                   }}
                 />
               </div>
-              <div className="text-xs mt-1.5 text-center" style={{ color: "#8A8F98" }}>
-                Llegarías al <span style={{ color: "#FFC72C", fontWeight: 600 }}>{Math.round(pctProyectado)}%</span> de tu presupuesto individual
+              <div className="text-xs mt-1.5 text-center" style={{ color: "#64748B" }}>
+                Llegarías al <span style={{ color: "#0EA5E9", fontWeight: 600 }}>{Math.round(pctProyectado)}%</span> de tu presupuesto individual
               </div>
             </div>
           )}
@@ -2165,6 +2139,11 @@ function AsesorView({ onExit }) {
 }
 
 // ---------- cajera view ----------
+const CAJERA_NAV = [
+  { key: "registro", label: "Registro", icon: LayoutGrid },
+  { key: "recordatorios", label: "Recordatorios", icon: Bell },
+];
+
 function CajeraView({ onExit }) {
   const [name, setName] = useState("");
   const [nameConfirmed, setNameConfirmed] = useState(false);
@@ -2440,22 +2419,22 @@ function CajeraView({ onExit }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#14161A" }}>
-        <Loader2 className="animate-spin" color="#E4002B" size={28} />
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#F4F7FB" }}>
+        <Loader2 className="animate-spin" color="#2563EB" size={28} />
       </div>
     );
   }
 
   if (!nameConfirmed) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-5" style={{ background: "#14161A" }}>
+      <div className="min-h-screen flex items-center justify-center px-5" style={{ background: "#F4F7FB" }}>
         <div className="w-full max-w-sm">
           <div className="text-center mb-6">
             <HondaLogo size={34} className="mx-auto mb-3" />
-            <div className="font-semibold uppercase tracking-[0.1em]" style={{ fontFamily: "'Oswald',sans-serif", color: "#F2F1EC" }}>
+            <div className="font-semibold uppercase tracking-[0.1em]" style={{ fontFamily: "'Oswald',sans-serif", color: "#0F172A" }}>
               Iniciar sesión
             </div>
-            <div className="text-xs mt-1" style={{ color: "#8A8F98" }}>
+            <div className="text-xs mt-1" style={{ color: "#64748B" }}>
               Ingresa con tu usuario de caja
             </div>
           </div>
@@ -2492,11 +2471,11 @@ function CajeraView({ onExit }) {
             onClick={doLogin}
             disabled={!clave}
             className="w-full rounded-md py-3 font-semibold uppercase text-sm tracking-[0.08em] disabled:opacity-40 mt-4"
-            style={{ background: "#E4002B", color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}
+            style={{ background: "#2563EB", color: "#0F172A", fontFamily: "'Oswald',sans-serif" }}
           >
             Ingresar
           </button>
-          <button onClick={onExit} className="w-full text-center text-xs mt-4" style={{ color: "#8A8F98" }}>
+          <button onClick={onExit} className="w-full text-center text-xs mt-4" style={{ color: "#64748B" }}>
             Volver
           </button>
         </div>
@@ -2507,48 +2486,46 @@ function CajeraView({ onExit }) {
   const cellInputStyle = {
     background: "transparent",
     border: "none",
-    color: "#F2F1EC",
+    color: "#0F172A",
     width: "100%",
   };
 
   return (
-    <div className="min-h-screen" style={{ background: "#14161A" }}>
+    <div className="min-h-screen" style={{ background: "#F4F7FB" }}>
       <TopBar title={`Caja · ${name}`} onExit={handleLogout} />
       <ChatWidget senderName={name} senderRole="Caja" />
       <div className="max-w-3xl lg:max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-5">
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setCajeraTab("registro")}
-            className="flex-1 min-w-[130px] rounded-lg py-3 font-semibold uppercase text-xs tracking-[0.1em] transition-colors"
-            style={{
-              fontFamily: "'Oswald',sans-serif",
-              background: cajeraTab === "registro" ? "#E4002B" : "#1E2126",
-              color: cajeraTab === "registro" ? "#F2F1EC" : "#8A8F98",
-              border: `1px solid ${cajeraTab === "registro" ? "#E4002B" : "#2A2E35"}`,
-            }}
-          >
-            Registro
-          </button>
-          <button
-            type="button"
-            onClick={() => setCajeraTab("recordatorios")}
-            className="flex-1 min-w-[130px] rounded-lg py-3 font-semibold uppercase text-xs tracking-[0.1em] transition-colors relative"
-            style={{
-              fontFamily: "'Oswald',sans-serif",
-              background: cajeraTab === "recordatorios" ? "#E4002B" : "#1E2126",
-              color: cajeraTab === "recordatorios" ? "#F2F1EC" : "#8A8F98",
-              border: `1px solid ${cajeraTab === "recordatorios" ? "#E4002B" : "#2A2E35"}`,
-            }}
-          >
-            Recordatorios
-            {recordatorios.some((r) => r.destinatario === name && r.esDeAdmin && !r.leido) && (
-              <span
-                className="absolute rounded-full"
-                style={{ top: 6, right: 8, width: 9, height: 9, background: "#FFC72C", border: "1.5px solid #14161A" }}
-              />
-            )}
-          </button>
+          {CAJERA_NAV.map((item) => {
+            const Icon = item.icon;
+            const active = cajeraTab === item.key;
+            const showBadge =
+              item.key === "recordatorios" &&
+              recordatorios.some((r) => r.destinatario === name && r.esDeAdmin && !r.leido);
+            return (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => setCajeraTab(item.key)}
+                className="flex-1 min-w-[130px] rounded-lg py-3 font-semibold uppercase text-xs tracking-[0.1em] transition-colors relative flex items-center justify-center gap-2"
+                style={{
+                  fontFamily: "'Oswald',sans-serif",
+                  background: active ? "#2563EB" : "#FFFFFF",
+                  color: active ? "#FFFFFF" : "#64748B",
+                  border: `1px solid ${active ? "#2563EB" : "#E2E8F0"}`,
+                }}
+              >
+                <Icon size={14} />
+                {item.label}
+                {showBadge && (
+                  <span
+                    className="absolute rounded-full"
+                    style={{ top: 6, right: 8, width: 9, height: 9, background: "#DC2626", border: "1.5px solid #FFFFFF" }}
+                  />
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {cajeraTab === "registro" && (
@@ -2565,27 +2542,27 @@ function CajeraView({ onExit }) {
           </Field>
           <div className="flex-1" />
           <div className="flex gap-3">
-            <div className="rounded-lg px-4 py-2.5" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
-              <div className="text-[10px] uppercase tracking-[0.12em]" style={{ color: "#8A8F98" }}>Total valor</div>
-              <div className="font-mono font-semibold text-sm" style={{ color: "#FFC72C" }}>{moneyExact(dayTotals.valor)}</div>
+            <div className="rounded-lg px-4 py-2.5" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
+              <div className="text-[10px] uppercase tracking-[0.12em]" style={{ color: "#64748B" }}>Total valor</div>
+              <div className="font-mono font-semibold text-sm" style={{ color: "#0EA5E9" }}>{moneyExact(dayTotals.valor)}</div>
             </div>
-            <div className="rounded-lg px-4 py-2.5" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
-              <div className="text-[10px] uppercase tracking-[0.12em]" style={{ color: "#8A8F98" }}>Total Portcoll</div>
-              <div className="font-mono font-semibold text-sm" style={{ color: "#FFC72C" }}>{moneyExact(dayTotals.portcoll)}</div>
+            <div className="rounded-lg px-4 py-2.5" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
+              <div className="text-[10px] uppercase tracking-[0.12em]" style={{ color: "#64748B" }}>Total Portcoll</div>
+              <div className="font-mono font-semibold text-sm" style={{ color: "#0EA5E9" }}>{moneyExact(dayTotals.portcoll)}</div>
             </div>
           </div>
         </div>
 
         {saveError && (
-          <div className="text-xs rounded-md px-3 py-2" style={{ color: "#FFD3D3", background: "#3A1F1F", border: "1px solid #E4002B" }}>
+          <div className="text-xs rounded-md px-3 py-2" style={{ color: "#B91C1C", background: "#FEF2F2", border: "1px solid #DC2626" }}>
             {saveError}
           </div>
         )}
 
-        <div className="overflow-x-auto rounded-lg" style={{ border: "1px solid #2A2E35" }}>
+        <div className="overflow-x-auto rounded-lg" style={{ border: "1px solid #E2E8F0" }}>
           <table className="w-full text-xs" style={{ minWidth: 880 }}>
             <thead>
-              <tr style={{ background: "#1E2126", color: "#8A8F98" }}>
+              <tr style={{ background: "#FFFFFF", color: "#64748B" }}>
                 <th className="text-left font-medium uppercase tracking-wide px-2 py-2.5">Comprobante</th>
                 <th className="text-left font-medium uppercase tracking-wide px-2 py-2.5">Cliente</th>
                 <th className="text-right font-medium uppercase tracking-wide px-2 py-2.5">Portcoll</th>
@@ -2598,7 +2575,7 @@ function CajeraView({ onExit }) {
             </thead>
             <tbody>
               {dayEntries.map((e, i) => (
-                <tr key={e.id} style={{ background: i % 2 ? "#1a1d22" : "#1E2126" }}>
+                <tr key={e.id} style={{ background: i % 2 ? "#F8FAFC" : "#FFFFFF" }}>
                   <td className="px-2 py-1.5">
                     <select
                       value={e.comprobante}
@@ -2608,7 +2585,7 @@ function CajeraView({ onExit }) {
                       style={cellInputStyle}
                     >
                       {COMPROBANTE_TIPOS.map((t) => (
-                        <option key={t} value={t} style={{ background: "#1E2126" }}>{t}</option>
+                        <option key={t} value={t} style={{ background: "#FFFFFF" }}>{t}</option>
                       ))}
                     </select>
                   </td>
@@ -2657,19 +2634,19 @@ function CajeraView({ onExit }) {
                       onBlur={() => commitRow(e.id)}
                       placeholder="Nota opcional..."
                       className="rounded px-1.5 py-1.5 outline-none text-xs"
-                      style={{ background: "transparent", border: "none", color: "#F2F1EC", width: "100%" }}
+                      style={{ background: "transparent", border: "none", color: "#0F172A", width: "100%" }}
                     />
                   </td>
                   <td className="px-2 py-1.5 text-center">
                     <button onClick={() => deleteRow(e.id)} aria-label="Eliminar">
-                      <Trash2 size={14} color="#8A8F98" />
+                      <Trash2 size={14} color="#64748B" />
                     </button>
                   </td>
                 </tr>
               ))}
               {dayEntries.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="text-center py-8 text-xs" style={{ color: "#8A8F98" }}>
+                  <td colSpan={8} className="text-center py-8 text-xs" style={{ color: "#64748B" }}>
                     Sin comprobantes para esta fecha todavía.
                   </td>
                 </tr>
@@ -2682,27 +2659,27 @@ function CajeraView({ onExit }) {
           type="button"
           onClick={addRow}
           className="rounded-md py-3 font-semibold uppercase text-sm tracking-[0.08em] flex items-center justify-center gap-2 self-start px-5"
-          style={{ background: "#E4002B", color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}
+          style={{ background: "#2563EB", color: "#0F172A", fontFamily: "'Oswald',sans-serif" }}
         >
           <Plus size={16} />
           Agregar fila
         </button>
 
         <div className="mt-2">
-          <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-3" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
+          <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-3" style={{ color: "#64748B", fontFamily: "'Oswald',sans-serif" }}>
             Transferencias
           </div>
 
           {transferError && (
-            <div className="text-xs rounded-md px-3 py-2 mb-3" style={{ color: "#FFD3D3", background: "#3A1F1F", border: "1px solid #E4002B" }}>
+            <div className="text-xs rounded-md px-3 py-2 mb-3" style={{ color: "#B91C1C", background: "#FEF2F2", border: "1px solid #DC2626" }}>
               {transferError}
             </div>
           )}
 
-          <div className="overflow-x-auto rounded-lg" style={{ border: "1px solid #2A2E35" }}>
+          <div className="overflow-x-auto rounded-lg" style={{ border: "1px solid #E2E8F0" }}>
             <table className="text-xs" style={{ width: "100%", maxWidth: 320 }}>
               <thead>
-                <tr style={{ background: "#1E2126", color: "#8A8F98" }}>
+                <tr style={{ background: "#FFFFFF", color: "#64748B" }}>
                   <th className="text-left font-medium uppercase tracking-wide px-3 py-2.5" style={{ width: 56 }}>N°</th>
                   <th className="text-right font-medium uppercase tracking-wide px-3 py-2.5">Valor</th>
                   <th className="px-2 py-2.5" style={{ width: 32 }}></th>
@@ -2710,8 +2687,8 @@ function CajeraView({ onExit }) {
               </thead>
               <tbody>
                 {dayTransfers.map((t, i) => (
-                  <tr key={t.id} style={{ background: i % 2 ? "#1a1d22" : "#1E2126" }}>
-                    <td className="px-3 py-1.5" style={{ color: "#8A8F98" }}>{i + 1}</td>
+                  <tr key={t.id} style={{ background: i % 2 ? "#F8FAFC" : "#FFFFFF" }}>
+                    <td className="px-3 py-1.5" style={{ color: "#64748B" }}>{i + 1}</td>
                     <td className="px-1 py-1.5">
                       <input
                         type="number"
@@ -2720,19 +2697,19 @@ function CajeraView({ onExit }) {
                         onChange={(ev) => updateTransfer(t.id, ev.target.value)}
                         onBlur={() => commitTransfer(t.id)}
                         className="rounded px-1.5 py-1.5 outline-none text-xs text-right"
-                        style={{ background: "transparent", border: "none", color: "#F2F1EC", width: "100%" }}
+                        style={{ background: "transparent", border: "none", color: "#0F172A", width: "100%" }}
                       />
                     </td>
                     <td className="px-2 py-1.5 text-center">
                       <button onClick={() => deleteTransfer(t.id)} aria-label="Eliminar">
-                        <Trash2 size={13} color="#8A8F98" />
+                        <Trash2 size={13} color="#64748B" />
                       </button>
                     </td>
                   </tr>
                 ))}
                 {dayTransfers.length === 0 && (
                   <tr>
-                    <td colSpan={3} className="text-center py-6 text-xs" style={{ color: "#8A8F98" }}>
+                    <td colSpan={3} className="text-center py-6 text-xs" style={{ color: "#64748B" }}>
                       Sin transferencias en esta fecha.
                     </td>
                   </tr>
@@ -2740,9 +2717,9 @@ function CajeraView({ onExit }) {
               </tbody>
               {dayTransfers.length > 0 && (
                 <tfoot>
-                  <tr style={{ background: "#1E2126" }}>
-                    <td className="px-3 py-2.5 text-xs font-medium" style={{ color: "#8A8F98" }}>Total</td>
-                    <td className="px-3 py-2.5 text-right font-mono font-semibold text-xs" style={{ color: "#FFC72C" }}>{moneyExact(totalTransferencias)}</td>
+                  <tr style={{ background: "#FFFFFF" }}>
+                    <td className="px-3 py-2.5 text-xs font-medium" style={{ color: "#64748B" }}>Total</td>
+                    <td className="px-3 py-2.5 text-right font-mono font-semibold text-xs" style={{ color: "#0EA5E9" }}>{moneyExact(totalTransferencias)}</td>
                     <td></td>
                   </tr>
                 </tfoot>
@@ -2754,7 +2731,7 @@ function CajeraView({ onExit }) {
             type="button"
             onClick={addTransfer}
             className="rounded-md py-2.5 font-semibold uppercase text-xs tracking-[0.08em] flex items-center justify-center gap-2 mt-3 px-4"
-            style={{ background: "#E4002B", color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}
+            style={{ background: "#2563EB", color: "#0F172A", fontFamily: "'Oswald',sans-serif" }}
           >
             <Plus size={14} />
             Agregar transferencia
@@ -2762,20 +2739,20 @@ function CajeraView({ onExit }) {
         </div>
 
         <div className="mt-2">
-          <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-3" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
+          <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-3" style={{ color: "#64748B", fontFamily: "'Oswald',sans-serif" }}>
             Egresos de caja
           </div>
 
           {egresoError && (
-            <div className="text-xs rounded-md px-3 py-2 mb-3" style={{ color: "#FFD3D3", background: "#3A1F1F", border: "1px solid #E4002B" }}>
+            <div className="text-xs rounded-md px-3 py-2 mb-3" style={{ color: "#B91C1C", background: "#FEF2F2", border: "1px solid #DC2626" }}>
               {egresoError}
             </div>
           )}
 
-          <div className="overflow-x-auto rounded-lg" style={{ border: "1px solid #2A2E35" }}>
+          <div className="overflow-x-auto rounded-lg" style={{ border: "1px solid #E2E8F0" }}>
             <table className="text-xs" style={{ width: "100%" }}>
               <thead>
-                <tr style={{ background: "#1E2126", color: "#8A8F98" }}>
+                <tr style={{ background: "#FFFFFF", color: "#64748B" }}>
                   <th className="text-right font-medium uppercase tracking-wide px-3 py-2.5" style={{ width: 110 }}>Valor</th>
                   <th className="text-left font-medium uppercase tracking-wide px-3 py-2.5">Motivo / justificación</th>
                   <th className="px-2 py-2.5" style={{ width: 32 }}></th>
@@ -2783,7 +2760,7 @@ function CajeraView({ onExit }) {
               </thead>
               <tbody>
                 {dayEgresos.map((g, i) => (
-                  <tr key={g.id} style={{ background: i % 2 ? "#1a1d22" : "#1E2126" }}>
+                  <tr key={g.id} style={{ background: i % 2 ? "#F8FAFC" : "#FFFFFF" }}>
                     <td className="px-1 py-1.5">
                       <input
                         type="number"
@@ -2792,7 +2769,7 @@ function CajeraView({ onExit }) {
                         onChange={(ev) => updateEgreso(g.id, "valor", ev.target.value)}
                         onBlur={() => commitEgreso(g.id)}
                         className="rounded px-1.5 py-1.5 outline-none text-xs text-right"
-                        style={{ background: "transparent", border: "none", color: "#FFC72C", width: "100%" }}
+                        style={{ background: "transparent", border: "none", color: "#0EA5E9", width: "100%" }}
                       />
                     </td>
                     <td className="px-1 py-1.5">
@@ -2802,19 +2779,19 @@ function CajeraView({ onExit }) {
                         onBlur={() => commitEgreso(g.id)}
                         placeholder="Ej. Compra de suministros"
                         className="rounded px-1.5 py-1.5 outline-none text-xs"
-                        style={{ background: "transparent", border: "none", color: "#F2F1EC", width: "100%" }}
+                        style={{ background: "transparent", border: "none", color: "#0F172A", width: "100%" }}
                       />
                     </td>
                     <td className="px-2 py-1.5 text-center">
                       <button onClick={() => deleteEgreso(g.id)} aria-label="Eliminar">
-                        <Trash2 size={13} color="#8A8F98" />
+                        <Trash2 size={13} color="#64748B" />
                       </button>
                     </td>
                   </tr>
                 ))}
                 {dayEgresos.length === 0 && (
                   <tr>
-                    <td colSpan={3} className="text-center py-6 text-xs" style={{ color: "#8A8F98" }}>
+                    <td colSpan={3} className="text-center py-6 text-xs" style={{ color: "#64748B" }}>
                       Sin egresos en esta fecha.
                     </td>
                   </tr>
@@ -2822,9 +2799,9 @@ function CajeraView({ onExit }) {
               </tbody>
               {dayEgresos.length > 0 && (
                 <tfoot>
-                  <tr style={{ background: "#1E2126" }}>
-                    <td className="px-3 py-2.5 text-right font-mono font-semibold text-xs" style={{ color: "#FFC72C" }}>{moneyExact(totalEgresos)}</td>
-                    <td className="px-3 py-2.5 text-xs font-medium" style={{ color: "#8A8F98" }}>Total egresos</td>
+                  <tr style={{ background: "#FFFFFF" }}>
+                    <td className="px-3 py-2.5 text-right font-mono font-semibold text-xs" style={{ color: "#0EA5E9" }}>{moneyExact(totalEgresos)}</td>
+                    <td className="px-3 py-2.5 text-xs font-medium" style={{ color: "#64748B" }}>Total egresos</td>
                     <td></td>
                   </tr>
                 </tfoot>
@@ -2836,7 +2813,7 @@ function CajeraView({ onExit }) {
             type="button"
             onClick={addEgreso}
             className="rounded-md py-2.5 font-semibold uppercase text-xs tracking-[0.08em] flex items-center justify-center gap-2 mt-3 px-4"
-            style={{ background: "#E4002B", color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}
+            style={{ background: "#2563EB", color: "#0F172A", fontFamily: "'Oswald',sans-serif" }}
           >
             <Plus size={14} />
             Agregar egreso
@@ -2844,22 +2821,22 @@ function CajeraView({ onExit }) {
         </div>
 
         <div className="mt-2">
-          <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-1" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
+          <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-1" style={{ color: "#64748B", fontFamily: "'Oswald',sans-serif" }}>
             Conteo de efectivo
           </div>
-          <div className="text-[11px] mb-3" style={{ color: "#8A8F98" }}>
+          <div className="text-[11px] mb-3" style={{ color: "#64748B" }}>
             Cuenta los billetes y monedas físicos en caja para la fecha seleccionada.
           </div>
 
-          <div className="rounded-lg p-4 sm:p-5" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+          <div className="rounded-lg p-4 sm:p-5" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div>
-                <div className="text-[11px] uppercase tracking-[0.12em] font-medium mb-2" style={{ color: "#8A8F98" }}>Billetes</div>
+                <div className="text-[11px] uppercase tracking-[0.12em] font-medium mb-2" style={{ color: "#64748B" }}>Billetes</div>
                 <div className="flex flex-col gap-2">
                   {BILLETES.map((d) => (
                     <div key={`b-${d}`} className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-mono w-14 shrink-0" style={{ color: "#C9CDD3" }}>{moneyExact(d)}</span>
-                      <span className="text-xs" style={{ color: "#4A4E56" }}>×</span>
+                      <span className="text-xs font-mono w-14 shrink-0" style={{ color: "#475569" }}>{moneyExact(d)}</span>
+                      <span className="text-xs" style={{ color: "#94A3B8" }}>×</span>
                       <input
                         type="number"
                         min="0"
@@ -2870,7 +2847,7 @@ function CajeraView({ onExit }) {
                         className="rounded px-2 py-1.5 text-xs text-center outline-none"
                         style={{ ...inputStyle, width: 60 }}
                       />
-                      <span className="text-xs font-mono flex-1 text-right" style={{ color: "#8A8F98" }}>
+                      <span className="text-xs font-mono flex-1 text-right" style={{ color: "#64748B" }}>
                         {moneyExact((Number(conteo[`b-${d}`]) || 0) * d)}
                       </span>
                     </div>
@@ -2879,12 +2856,12 @@ function CajeraView({ onExit }) {
               </div>
 
               <div>
-                <div className="text-[11px] uppercase tracking-[0.12em] font-medium mb-2" style={{ color: "#8A8F98" }}>Monedas</div>
+                <div className="text-[11px] uppercase tracking-[0.12em] font-medium mb-2" style={{ color: "#64748B" }}>Monedas</div>
                 <div className="flex flex-col gap-2">
                   {MONEDAS.map((d) => (
                     <div key={`m-${d}`} className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-mono w-14 shrink-0" style={{ color: "#C9CDD3" }}>{moneyExact(d)}</span>
-                      <span className="text-xs" style={{ color: "#4A4E56" }}>×</span>
+                      <span className="text-xs font-mono w-14 shrink-0" style={{ color: "#475569" }}>{moneyExact(d)}</span>
+                      <span className="text-xs" style={{ color: "#94A3B8" }}>×</span>
                       <input
                         type="number"
                         min="0"
@@ -2895,7 +2872,7 @@ function CajeraView({ onExit }) {
                         className="rounded px-2 py-1.5 text-xs text-center outline-none"
                         style={{ ...inputStyle, width: 60 }}
                       />
-                      <span className="text-xs font-mono flex-1 text-right" style={{ color: "#8A8F98" }}>
+                      <span className="text-xs font-mono flex-1 text-right" style={{ color: "#64748B" }}>
                         {moneyExact((Number(conteo[`m-${d}`]) || 0) * d)}
                       </span>
                     </div>
@@ -2905,40 +2882,40 @@ function CajeraView({ onExit }) {
             </div>
 
             {conteoSaved && (
-              <div className="text-xs mt-3" style={{ color: "#8FD98F" }}>Guardado ✓</div>
+              <div className="text-xs mt-3" style={{ color: "#16A34A" }}>Guardado ✓</div>
             )}
 
-            <div className="mt-5 pt-4 flex flex-col gap-2" style={{ borderTop: "1px solid #2A2E35" }}>
+            <div className="mt-5 pt-4 flex flex-col gap-2" style={{ borderTop: "1px solid #E2E8F0" }}>
               <div className="flex items-center justify-between text-xs">
-                <span style={{ color: "#8A8F98" }}>Total contado (billetes + monedas)</span>
-                <span className="font-mono font-semibold" style={{ color: "#F2F1EC" }}>{moneyExact(totalContado)}</span>
+                <span style={{ color: "#64748B" }}>Total contado (billetes + monedas)</span>
+                <span className="font-mono font-semibold" style={{ color: "#0F172A" }}>{moneyExact(totalContado)}</span>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span style={{ color: "#8A8F98" }}>Total valor + Total Portcoll</span>
-                <span className="font-mono" style={{ color: "#F2F1EC" }}>{moneyExact(dayTotals.valor + dayTotals.portcoll)}</span>
+                <span style={{ color: "#64748B" }}>Total valor + Total Portcoll</span>
+                <span className="font-mono" style={{ color: "#0F172A" }}>{moneyExact(dayTotals.valor + dayTotals.portcoll)}</span>
               </div>
               {totalEgresos > 0 && (
                 <div className="flex items-center justify-between text-xs">
-                  <span style={{ color: "#8A8F98" }}>− Egresos de caja</span>
-                  <span className="font-mono" style={{ color: "#F2F1EC" }}>−{moneyExact(totalEgresos)}</span>
+                  <span style={{ color: "#64748B" }}>− Egresos de caja</span>
+                  <span className="font-mono" style={{ color: "#0F172A" }}>−{moneyExact(totalEgresos)}</span>
                 </div>
               )}
               <div className="flex items-center justify-between text-xs">
-                <span style={{ color: "#8A8F98" }}>Efectivo esperado</span>
-                <span className="font-mono font-semibold" style={{ color: "#F2F1EC" }}>{moneyExact(efectivoEsperado)}</span>
+                <span style={{ color: "#64748B" }}>Efectivo esperado</span>
+                <span className="font-mono font-semibold" style={{ color: "#0F172A" }}>{moneyExact(efectivoEsperado)}</span>
               </div>
               <div
                 className="flex items-center justify-between rounded-md px-3 py-2.5 mt-1"
                 style={{
-                  background: Math.abs(totalContado - efectivoEsperado) < 0.005 ? "#1F3A22" : "#3A1F1F",
-                  border: `1px solid ${Math.abs(totalContado - efectivoEsperado) < 0.005 ? "#2E7D32" : "#E4002B"}`,
+                  background: Math.abs(totalContado - efectivoEsperado) < 0.005 ? "#1F3A22" : "#FEF2F2",
+                  border: `1px solid ${Math.abs(totalContado - efectivoEsperado) < 0.005 ? "#16A34A" : "#2563EB"}`,
                 }}
               >
-                <span className="text-xs font-medium" style={{ color: "#F2F1EC" }}>
+                <span className="text-xs font-medium" style={{ color: "#0F172A" }}>
                   {Math.abs(totalContado - efectivoEsperado) < 0.005 ? "Caja cuadrada ✓" : totalContado > efectivoEsperado ? "Sobra en caja" : "Falta en caja"}
                 </span>
                 {Math.abs(totalContado - efectivoEsperado) >= 0.005 && (
-                  <span className="font-mono font-semibold text-sm" style={{ color: "#FFC72C" }}>
+                  <span className="font-mono font-semibold text-sm" style={{ color: "#0EA5E9" }}>
                     {moneyExact(Math.abs(totalContado - efectivoEsperado))}
                   </span>
                 )}
@@ -2948,14 +2925,14 @@ function CajeraView({ onExit }) {
         </div>
 
         <div className="mt-2">
-          <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-1" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
+          <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-1" style={{ color: "#64748B", fontFamily: "'Oswald',sans-serif" }}>
             Calculadora de cambio
           </div>
-          <div className="text-[11px] mb-3" style={{ color: "#8A8F98" }}>
+          <div className="text-[11px] mb-3" style={{ color: "#64748B" }}>
             Herramienta de ayuda — no se guarda ni afecta los totales de caja.
           </div>
 
-          <div className="rounded-lg p-4 sm:p-5" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+          <div className="rounded-lg p-4 sm:p-5" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Field label="Cuánto debe cobrar">
                 <input
@@ -2986,21 +2963,21 @@ function CajeraView({ onExit }) {
                 <div
                   className="flex items-center justify-between rounded-md px-4 py-3 mt-4"
                   style={{
-                    background: vuelto >= 0 ? "#1F3A22" : "#3A1F1F",
-                    border: `1px solid ${vuelto >= 0 ? "#2E7D32" : "#E4002B"}`,
+                    background: vuelto >= 0 ? "#1F3A22" : "#FEF2F2",
+                    border: `1px solid ${vuelto >= 0 ? "#16A34A" : "#2563EB"}`,
                   }}
                 >
-                  <span className="text-sm font-medium" style={{ color: "#F2F1EC" }}>
+                  <span className="text-sm font-medium" style={{ color: "#0F172A" }}>
                     {vuelto >= 0 ? "Cambio a entregar" : "Falta que el cliente pague"}
                   </span>
-                  <span className="font-mono font-bold text-xl" style={{ color: "#FFC72C" }}>
+                  <span className="font-mono font-bold text-xl" style={{ color: "#0EA5E9" }}>
                     {moneyExact(Math.abs(vuelto))}
                   </span>
                 </div>
 
                 {vuelto > 0 && vueltoDesglose.length > 0 && (
                   <div className="mt-4">
-                    <div className="text-[11px] uppercase tracking-[0.12em] font-medium mb-2" style={{ color: "#8A8F98" }}>
+                    <div className="text-[11px] uppercase tracking-[0.12em] font-medium mb-2" style={{ color: "#64748B" }}>
                       Sugerencia de billetes / monedas
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -3008,7 +2985,7 @@ function CajeraView({ onExit }) {
                         <div
                           key={d.denom}
                           className="rounded-md px-3 py-1.5 text-xs font-mono"
-                          style={{ background: "#14161A", border: "1px solid #2A2E35", color: "#C9CDD3" }}
+                          style={{ background: "#F4F7FB", border: "1px solid #E2E8F0", color: "#475569" }}
                         >
                           {d.qty} × {moneyExact(d.denom)}
                         </div>
@@ -3027,7 +3004,7 @@ function CajeraView({ onExit }) {
                   setRecibido("");
                 }}
                 className="text-xs mt-4"
-                style={{ color: "#8A8F98" }}
+                style={{ color: "#64748B" }}
               >
                 Limpiar
               </button>
@@ -3046,6 +3023,16 @@ function CajeraView({ onExit }) {
 }
 
 // ---------- admin view ----------
+const ADMIN_NAV = [
+  { key: "ventas", label: "Ventas", icon: LayoutGrid },
+  { key: "caja", label: "Caja", icon: Wallet },
+  { key: "proyecciones", label: "Proyecciones", icon: TrendingUp },
+  { key: "fuerza", label: "Fuerza", icon: Zap },
+  { key: "recordatorios", label: "Recordatorios", icon: Bell },
+  { key: "crm", label: "CRM", icon: Users },
+  { key: "reunion", label: "Reunión", icon: FileText },
+];
+
 function AdminView({ onExit }) {
   const [pin, setPin] = useState("");
   const [unlocked, setUnlocked] = useState(false);
@@ -3670,14 +3657,14 @@ function AdminView({ onExit }) {
 
   if (!unlocked) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-5" style={{ background: "#14161A" }}>
+      <div className="min-h-screen flex items-center justify-center px-5" style={{ background: "#F4F7FB" }}>
         <div className="w-full max-w-xs">
           <div className="text-center mb-6">
-            <Lock size={24} color="#E4002B" className="mx-auto mb-3" />
-            <div className="font-semibold uppercase tracking-[0.1em]" style={{ fontFamily: "'Oswald',sans-serif", color: "#F2F1EC" }}>
+            <Lock size={24} color="#2563EB" className="mx-auto mb-3" />
+            <div className="font-semibold uppercase tracking-[0.1em]" style={{ fontFamily: "'Oswald',sans-serif", color: "#0F172A" }}>
               Panel administrador
             </div>
-            <div className="text-xs mt-1" style={{ color: "#8A8F98" }}>
+            <div className="text-xs mt-1" style={{ color: "#64748B" }}>
               Ingresa el PIN de jefe de tienda
             </div>
           </div>
@@ -3696,11 +3683,11 @@ function AdminView({ onExit }) {
           <button
             onClick={() => (pin === ADMIN_PIN ? setUnlocked(true) : setPinError("PIN incorrecto"))}
             className="w-full rounded-md py-3 font-semibold uppercase text-sm tracking-[0.08em]"
-            style={{ background: "#E4002B", color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}
+            style={{ background: "#2563EB", color: "#0F172A", fontFamily: "'Oswald',sans-serif" }}
           >
             Entrar
           </button>
-          <button onClick={onExit} className="w-full text-center text-xs mt-4" style={{ color: "#8A8F98" }}>
+          <button onClick={onExit} className="w-full text-center text-xs mt-4" style={{ color: "#64748B" }}>
             Volver
           </button>
         </div>
@@ -3710,20 +3697,62 @@ function AdminView({ onExit }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#14161A" }}>
-        <Loader2 className="animate-spin" color="#E4002B" size={28} />
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#F4F7FB" }}>
+        <Loader2 className="animate-spin" color="#2563EB" size={28} />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen" style={{ background: "#14161A" }}>
+    <div className="min-h-screen" style={{ background: "#F4F7FB" }}>
       <TopBar title="Panel administrador" onExit={onExit} />
       <ChatWidget senderName="Alejandro" senderRole="Administrador" />
+      <div className="flex">
+        <aside
+          className="hidden md:flex flex-col shrink-0 sticky"
+          style={{ width: 220, background: "#FFFFFF", borderRight: "1px solid #E2E8F0", top: 58, height: "calc(100vh - 58px)" }}
+        >
+          <nav className="flex-1 px-3 py-5 flex flex-col gap-1 overflow-y-auto">
+            {ADMIN_NAV.map((item) => {
+              const Icon = item.icon;
+              const active = adminTab === item.key;
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => setAdminTab(item.key)}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left"
+                  style={{
+                    background: active ? "#EFF6FF" : "transparent",
+                    color: active ? "#2563EB" : "#475569",
+                  }}
+                >
+                  <Icon size={17} />
+                  {item.label}
+                </button>
+              );
+            })}
+          </nav>
+        </aside>
+
+        <main className="flex-1 min-w-0">
+          <div className="md:hidden px-4 pt-4">
+            <select
+              value={adminTab}
+              onChange={(e) => setAdminTab(e.target.value)}
+              className="w-full rounded-md px-3 py-2.5 text-sm font-medium outline-none"
+              style={inputStyle}
+            >
+              {ADMIN_NAV.map((item) => (
+                <option key={item.key} value={item.key}>{item.label}</option>
+              ))}
+            </select>
+          </div>
+
       <div className="max-w-3xl lg:max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-7">
-        <div className="rounded-lg p-4 sm:p-5" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+        <div className="rounded-lg p-4 sm:p-5" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
           <div className="flex items-center justify-between mb-3">
-            <div className="font-semibold uppercase text-xs tracking-[0.14em]" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
+            <div className="font-semibold uppercase text-xs tracking-[0.14em]" style={{ color: "#64748B", fontFamily: "'Oswald',sans-serif" }}>
               Periodo del reporte
             </div>
             <button
@@ -3731,7 +3760,7 @@ function AdminView({ onExit }) {
               onClick={handleRefresh}
               disabled={refreshing}
               className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md disabled:opacity-50"
-              style={{ color: "#C9CDD3", border: "1px solid #2A2E35" }}
+              style={{ color: "#475569", border: "1px solid #E2E8F0" }}
             >
               <RefreshCw size={13} className={refreshing ? "animate-spin" : ""} />
               {refreshing ? "Actualizando..." : "Actualizar"}
@@ -3762,7 +3791,7 @@ function AdminView({ onExit }) {
                   className="rounded-md px-3 py-2.5 text-sm outline-none"
                   style={inputStyle}
                 />
-                <span className="text-xs" style={{ color: "#8A8F98" }}>a</span>
+                <span className="text-xs" style={{ color: "#64748B" }}>a</span>
                 <input
                   type="date"
                   value={rangeTo}
@@ -3773,115 +3802,21 @@ function AdminView({ onExit }) {
               </div>
             )}
 
-            <span className="text-xs" style={{ color: "#8A8F98" }}>
-              Mostrando: <span style={{ color: "#FFC72C" }}>{periodLabel}</span> · {salesInPeriod.length} {salesInPeriod.length === 1 ? "venta" : "ventas"}
+            <span className="text-xs" style={{ color: "#64748B" }}>
+              Mostrando: <span style={{ color: "#0EA5E9" }}>{periodLabel}</span> · {salesInPeriod.length} {salesInPeriod.length === 1 ? "venta" : "ventas"}
             </span>
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setAdminTab("ventas")}
-            className="flex-1 min-w-[130px] rounded-lg py-3 font-semibold uppercase text-xs tracking-[0.1em] transition-colors"
-            style={{
-              fontFamily: "'Oswald',sans-serif",
-              background: adminTab === "ventas" ? "#E4002B" : "#1E2126",
-              color: adminTab === "ventas" ? "#F2F1EC" : "#8A8F98",
-              border: `1px solid ${adminTab === "ventas" ? "#E4002B" : "#2A2E35"}`,
-            }}
-          >
-            Ventas
-          </button>
-          <button
-            type="button"
-            onClick={() => setAdminTab("caja")}
-            className="flex-1 min-w-[130px] rounded-lg py-3 font-semibold uppercase text-xs tracking-[0.1em] transition-colors"
-            style={{
-              fontFamily: "'Oswald',sans-serif",
-              background: adminTab === "caja" ? "#E4002B" : "#1E2126",
-              color: adminTab === "caja" ? "#F2F1EC" : "#8A8F98",
-              border: `1px solid ${adminTab === "caja" ? "#E4002B" : "#2A2E35"}`,
-            }}
-          >
-            Caja
-          </button>
-          <button
-            type="button"
-            onClick={() => setAdminTab("proyecciones")}
-            className="flex-1 min-w-[130px] rounded-lg py-3 font-semibold uppercase text-xs tracking-[0.1em] transition-colors"
-            style={{
-              fontFamily: "'Oswald',sans-serif",
-              background: adminTab === "proyecciones" ? "#E4002B" : "#1E2126",
-              color: adminTab === "proyecciones" ? "#F2F1EC" : "#8A8F98",
-              border: `1px solid ${adminTab === "proyecciones" ? "#E4002B" : "#2A2E35"}`,
-            }}
-          >
-            Proyecciones
-          </button>
-          <button
-            type="button"
-            onClick={() => setAdminTab("fuerza")}
-            className="flex-1 min-w-[130px] rounded-lg py-3 font-semibold uppercase text-xs tracking-[0.1em] transition-colors"
-            style={{
-              fontFamily: "'Oswald',sans-serif",
-              background: adminTab === "fuerza" ? "#E4002B" : "#1E2126",
-              color: adminTab === "fuerza" ? "#F2F1EC" : "#8A8F98",
-              border: `1px solid ${adminTab === "fuerza" ? "#E4002B" : "#2A2E35"}`,
-            }}
-          >
-            Fuerza
-          </button>
-          <button
-            type="button"
-            onClick={() => setAdminTab("recordatorios")}
-            className="flex-1 min-w-[130px] rounded-lg py-3 font-semibold uppercase text-xs tracking-[0.1em] transition-colors"
-            style={{
-              fontFamily: "'Oswald',sans-serif",
-              background: adminTab === "recordatorios" ? "#E4002B" : "#1E2126",
-              color: adminTab === "recordatorios" ? "#F2F1EC" : "#8A8F98",
-              border: `1px solid ${adminTab === "recordatorios" ? "#E4002B" : "#2A2E35"}`,
-            }}
-          >
-            Recordatorios
-          </button>
-          <button
-            type="button"
-            onClick={() => setAdminTab("crm")}
-            className="flex-1 min-w-[130px] rounded-lg py-3 font-semibold uppercase text-xs tracking-[0.1em] transition-colors"
-            style={{
-              fontFamily: "'Oswald',sans-serif",
-              background: adminTab === "crm" ? "#E4002B" : "#1E2126",
-              color: adminTab === "crm" ? "#F2F1EC" : "#8A8F98",
-              border: `1px solid ${adminTab === "crm" ? "#E4002B" : "#2A2E35"}`,
-            }}
-          >
-            CRM
-          </button>
-          <button
-            type="button"
-            onClick={() => setAdminTab("reunion")}
-            className="flex-1 min-w-[130px] rounded-lg py-3 font-semibold uppercase text-xs tracking-[0.1em] transition-colors"
-            style={{
-              fontFamily: "'Oswald',sans-serif",
-              background: adminTab === "reunion" ? "#E4002B" : "#1E2126",
-              color: adminTab === "reunion" ? "#F2F1EC" : "#8A8F98",
-              border: `1px solid ${adminTab === "reunion" ? "#E4002B" : "#2A2E35"}`,
-            }}
-          >
-            Reunión
-          </button>
-        </div>
-
         {adminTab === "ventas" && (
         <>
-        <div className="rounded-lg p-4 sm:p-5" style={{ background: "#1E2126", border: "1px solid #E4002B" }}>
+        <div className="rounded-lg p-4 sm:p-5" style={{ background: "#FFFFFF", border: "1px solid #2563EB" }}>
           <div className="flex items-center justify-between mb-4">
-            <div className="font-semibold uppercase text-xs tracking-[0.14em]" style={{ color: "#E4002B", fontFamily: "'Oswald',sans-serif" }}>
+            <div className="font-semibold uppercase text-xs tracking-[0.14em]" style={{ color: "#2563EB", fontFamily: "'Oswald',sans-serif" }}>
               Presupuesto · {monthLabel(budgetViewMonthKey)}
             </div>
             {!esMesActual && (
-              <span className="text-[10px] uppercase tracking-wide px-2 py-1 rounded" style={{ background: "#3A2E1F", color: "#FFC72C", border: "1px solid #FFC72C" }}>
+              <span className="text-[10px] uppercase tracking-wide px-2 py-1 rounded" style={{ background: "#FFF7ED", color: "#C2410C", border: "1px solid #FDBA74" }}>
                 Mes anterior · solo lectura
               </span>
             )}
@@ -3920,29 +3855,29 @@ function AdminView({ onExit }) {
                   onClick={saveBudgetForm}
                   disabled={savingBudget}
                   className="rounded-md px-4 py-2.5 font-semibold uppercase text-xs tracking-[0.08em] flex items-center gap-2 disabled:opacity-50"
-                  style={{ background: "#E4002B", color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}
+                  style={{ background: "#2563EB", color: "#0F172A", fontFamily: "'Oswald',sans-serif" }}
                 >
                   {savingBudget && <Loader2 size={13} className="animate-spin" />}
                   Guardar presupuesto del mes
                 </button>
-                {budgetSaved && <span className="text-xs" style={{ color: "#8FD98F" }}>Guardado ✓</span>}
+                {budgetSaved && <span className="text-xs" style={{ color: "#16A34A" }}>Guardado ✓</span>}
               </div>
 
               {(Number(budgetForm.units) > 0 || Number(budgetForm.dollars) > 0) && (
-                <div className="text-[11px] mb-5" style={{ color: "#8A8F98" }}>
+                <div className="text-[11px] mb-5" style={{ color: "#64748B" }}>
                   Cada uno de los {ASESORES.length} asesores verá su propia meta:{" "}
                   {Number(budgetForm.units) > 0 && (
-                    <span style={{ color: "#C9CDD3" }}>{Math.round((Number(budgetForm.units) / ASESORES.length) * 10) / 10} unidades</span>
+                    <span style={{ color: "#475569" }}>{Math.round((Number(budgetForm.units) / ASESORES.length) * 10) / 10} unidades</span>
                   )}
                   {Number(budgetForm.units) > 0 && Number(budgetForm.dollars) > 0 && " · "}
                   {Number(budgetForm.dollars) > 0 && (
-                    <span style={{ color: "#C9CDD3" }}>{money(Number(budgetForm.dollars) / ASESORES.length)}</span>
+                    <span style={{ color: "#475569" }}>{money(Number(budgetForm.dollars) / ASESORES.length)}</span>
                   )}
                 </div>
               )}
             </>
           ) : (
-            <div className="text-xs mb-5" style={{ color: "#8A8F98" }}>
+            <div className="text-xs mb-5" style={{ color: "#64748B" }}>
               Estás viendo el presupuesto que quedó guardado para {monthLabel(budgetViewMonthKey)} — no se puede editar un mes que ya pasó.
               Para cambiar el presupuesto de este mes, ve al selector de arriba y elige {monthLabel(monthKey)}.
             </div>
@@ -3971,54 +3906,54 @@ function AdminView({ onExit }) {
 
           {(viewBudgetUnits > 0 || viewBudgetDollars > 0) && (
             <div className="mt-4">
-              <div className="text-[11px] uppercase tracking-[0.12em] font-medium mb-2" style={{ color: "#8A8F98" }}>
+              <div className="text-[11px] uppercase tracking-[0.12em] font-medium mb-2" style={{ color: "#64748B" }}>
                 Presupuesto individual por asesor
               </div>
-              <div className="text-[10px] mb-2" style={{ color: "#8A8F98" }}>
+              <div className="text-[10px] mb-2" style={{ color: "#64748B" }}>
                 La línea blanca en cada barra marca en qué % deberían ir, según los días transcurridos del mes ({Math.round(viewMonthProgressPct)}%).
               </div>
               <div className="flex flex-col gap-2">
                 {presupuestoPorAsesor.map((p) => (
-                  <div key={p.asesor} className="rounded-lg px-4 py-3" style={{ background: "#14161A", border: "1px solid #2A2E35" }}>
+                  <div key={p.asesor} className="rounded-lg px-4 py-3" style={{ background: "#F4F7FB", border: "1px solid #E2E8F0" }}>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium" style={{ color: "#F2F1EC" }}>{p.asesor}</span>
+                      <span className="text-sm font-medium" style={{ color: "#0F172A" }}>{p.asesor}</span>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <div className="flex items-center justify-between text-[11px] mb-1">
-                          <span style={{ color: "#8A8F98" }}>Unidades</span>
-                          <span style={{ color: p.pctUnidades >= 100 ? "#8FD98F" : "#FFC72C" }}>{Math.round(p.pctUnidades)}%</span>
+                          <span style={{ color: "#64748B" }}>Unidades</span>
+                          <span style={{ color: p.pctUnidades >= 100 ? "#16A34A" : "#0EA5E9" }}>{Math.round(p.pctUnidades)}%</span>
                         </div>
-                        <div className="w-full h-1.5 rounded-full overflow-hidden relative" style={{ background: "#2A2E35" }}>
+                        <div className="w-full h-1.5 rounded-full overflow-hidden relative" style={{ background: "#E2E8F0" }}>
                           <div
                             className="h-full rounded-full"
                             style={{
                               width: `${Math.min(100, Math.max(0, p.pctUnidades))}%`,
-                              background: p.pctUnidades >= 100 ? "#2E7D32" : p.pctUnidades >= 70 ? "#FFC72C" : "#E4002B",
+                              background: p.pctUnidades >= 100 ? "#16A34A" : p.pctUnidades >= 70 ? "#0EA5E9" : "#2563EB",
                             }}
                           />
-                          <div className="absolute top-0 bottom-0" style={{ left: `${Math.min(100, Math.max(0, viewMonthProgressPct))}%`, width: 2, background: "#F2F1EC", opacity: 0.85 }} />
+                          <div className="absolute top-0 bottom-0" style={{ left: `${Math.min(100, Math.max(0, viewMonthProgressPct))}%`, width: 2, background: "#0F172A", opacity: 0.85 }} />
                         </div>
-                        <div className="text-[10px] mt-1" style={{ color: "#8A8F98" }}>
+                        <div className="text-[10px] mt-1" style={{ color: "#64748B" }}>
                           {p.unidades} de {Math.round(p.metaUnidades * 10) / 10} · deberían ir en {Math.round(p.metaUnidades * (viewMonthProgressPct / 100) * 10) / 10}
                         </div>
                       </div>
                       <div>
                         <div className="flex items-center justify-between text-[11px] mb-1">
-                          <span style={{ color: "#8A8F98" }}>Dólares</span>
-                          <span style={{ color: p.pctDolares >= 100 ? "#8FD98F" : "#FFC72C" }}>{Math.round(p.pctDolares)}%</span>
+                          <span style={{ color: "#64748B" }}>Dólares</span>
+                          <span style={{ color: p.pctDolares >= 100 ? "#16A34A" : "#0EA5E9" }}>{Math.round(p.pctDolares)}%</span>
                         </div>
-                        <div className="w-full h-1.5 rounded-full overflow-hidden relative" style={{ background: "#2A2E35" }}>
+                        <div className="w-full h-1.5 rounded-full overflow-hidden relative" style={{ background: "#E2E8F0" }}>
                           <div
                             className="h-full rounded-full"
                             style={{
                               width: `${Math.min(100, Math.max(0, p.pctDolares))}%`,
-                              background: p.pctDolares >= 100 ? "#2E7D32" : p.pctDolares >= 70 ? "#FFC72C" : "#E4002B",
+                              background: p.pctDolares >= 100 ? "#16A34A" : p.pctDolares >= 70 ? "#0EA5E9" : "#2563EB",
                             }}
                           />
-                          <div className="absolute top-0 bottom-0" style={{ left: `${Math.min(100, Math.max(0, viewMonthProgressPct))}%`, width: 2, background: "#F2F1EC", opacity: 0.85 }} />
+                          <div className="absolute top-0 bottom-0" style={{ left: `${Math.min(100, Math.max(0, viewMonthProgressPct))}%`, width: 2, background: "#0F172A", opacity: 0.85 }} />
                         </div>
-                        <div className="text-[10px] mt-1" style={{ color: "#8A8F98" }}>
+                        <div className="text-[10px] mt-1" style={{ color: "#64748B" }}>
                           {money(p.dolares)} de {money(p.metaDolares)} · deberían ir en {money(p.metaDolares * (viewMonthProgressPct / 100))}
                         </div>
                       </div>
@@ -4032,40 +3967,40 @@ function AdminView({ onExit }) {
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <MetricOdometer label={`Ticket promedio · ${periodLabel}`} value={ticketGlobal} prefix="$" />
-          <div className="rounded-lg p-4 flex flex-col justify-center gap-1" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
-            <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#8A8F98" }}>Total vendido</span>
-            <span className="font-mono font-semibold text-lg sm:text-xl" style={{ color: "#F2F1EC" }}>{money(totalGlobal / 1.15)}</span>
+          <div className="rounded-lg p-4 flex flex-col justify-center gap-1" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
+            <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#64748B" }}>Total vendido</span>
+            <span className="font-mono font-semibold text-lg sm:text-xl" style={{ color: "#0F172A" }}>{money(totalGlobal / 1.15)}</span>
             {periodSelection === monthKey && (
-              <span className="text-[10px] mt-1" style={{ color: "#8A8F98" }}>
+              <span className="text-[10px] mt-1" style={{ color: "#64748B" }}>
                 {daysLeftInMonth() === 0 ? "Último día del mes" : `${daysLeftInMonth()} ${daysLeftInMonth() === 1 ? "día" : "días"} para cerrar el mes`}
               </span>
             )}
           </div>
-          <div className="rounded-lg p-4 flex flex-col justify-center gap-1 col-span-2 sm:col-span-1" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
-            <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#8A8F98" }}>Transacciones</span>
-            <span className="font-mono font-semibold text-lg sm:text-xl" style={{ color: "#F2F1EC" }}>{salesInPeriod.length}</span>
+          <div className="rounded-lg p-4 flex flex-col justify-center gap-1 col-span-2 sm:col-span-1" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
+            <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#64748B" }}>Transacciones</span>
+            <span className="font-mono font-semibold text-lg sm:text-xl" style={{ color: "#0F172A" }}>{salesInPeriod.length}</span>
           </div>
         </div>
 
         {byAsesor.length > 0 && (
           <div>
-            <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-3" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
+            <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-3" style={{ color: "#64748B", fontFamily: "'Oswald',sans-serif" }}>
               Ranking · ventas por asesor · {periodLabel}
             </div>
-            <div className="rounded-lg p-4" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+            <div className="rounded-lg p-4" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
               <ResponsiveContainer width="100%" height={Math.max(160, byAsesor.length * 42)}>
                 <BarChart data={byAsesor} layout="vertical" margin={{ left: 8, right: 24 }}>
-                  <CartesianGrid horizontal={false} stroke="#2A2E35" />
-                  <XAxis type="number" tick={{ fill: "#8A8F98", fontSize: 11 }} axisLine={{ stroke: "#2A2E35" }} tickLine={false} />
-                  <YAxis dataKey="asesor" type="category" width={100} tick={{ fill: "#C9CDD3", fontSize: 12 }} axisLine={{ stroke: "#2A2E35" }} tickLine={false} />
+                  <CartesianGrid horizontal={false} stroke="#E2E8F0" />
+                  <XAxis type="number" tick={{ fill: "#64748B", fontSize: 11 }} axisLine={{ stroke: "#E2E8F0" }} tickLine={false} />
+                  <YAxis dataKey="asesor" type="category" width={100} tick={{ fill: "#475569", fontSize: 12 }} axisLine={{ stroke: "#E2E8F0" }} tickLine={false} />
                   <Tooltip
                     formatter={(v) => money(v)}
-                    contentStyle={{ background: "#1E2126", border: "1px solid #2A2E35", borderRadius: 6, color: "#F2F1EC" }}
-                    labelStyle={{ color: "#F2F1EC" }}
+                    contentStyle={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: 6, color: "#0F172A" }}
+                    labelStyle={{ color: "#0F172A" }}
                   />
                   <Bar dataKey="total" radius={[0, 4, 4, 0]}>
                     {byAsesor.map((_, i) => (
-                      <Cell key={i} fill={i === 0 ? "#FFC72C" : "#E4002B"} />
+                      <Cell key={i} fill={i === 0 ? "#0EA5E9" : "#2563EB"} />
                     ))}
                   </Bar>
                 </BarChart>
@@ -4074,17 +4009,17 @@ function AdminView({ onExit }) {
 
             <div className="mt-3 flex flex-col gap-2">
               {byAsesor.map((a, i) => (
-                <div key={a.asesor} className="flex items-center justify-between rounded-lg px-4 py-2.5" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+                <div key={a.asesor} className="flex items-center justify-between rounded-lg px-4 py-2.5" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
                   <div className="flex items-center gap-3">
-                    <span className="font-mono text-xs w-5" style={{ color: i === 0 ? "#FFC72C" : "#8A8F98" }}>
+                    <span className="font-mono text-xs w-5" style={{ color: i === 0 ? "#0EA5E9" : "#64748B" }}>
                       {String(i + 1).padStart(2, "0")}
                     </span>
-                    <span className="text-sm font-medium" style={{ color: "#F2F1EC" }}>{a.asesor}</span>
-                    <span className="text-xs" style={{ color: "#8A8F98" }}>{a.count} ventas</span>
+                    <span className="text-sm font-medium" style={{ color: "#0F172A" }}>{a.asesor}</span>
+                    <span className="text-xs" style={{ color: "#64748B" }}>{a.count} ventas</span>
                   </div>
                   <div className="flex items-center gap-4">
-                    <span className="font-mono font-semibold text-sm" style={{ color: "#FFC72C" }}>{money(a.total)}</span>
-                    <span className="text-xs" style={{ color: "#8A8F98" }}>{money(a.ticket)} ticket prom.</span>
+                    <span className="font-mono font-semibold text-sm" style={{ color: "#0EA5E9" }}>{money(a.total)}</span>
+                    <span className="text-xs" style={{ color: "#64748B" }}>{money(a.ticket)} ticket prom.</span>
                   </div>
                 </div>
               ))}
@@ -4095,31 +4030,31 @@ function AdminView({ onExit }) {
         {byModelo.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             <div>
-              <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-3" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
+              <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-3" style={{ color: "#64748B", fontFamily: "'Oswald',sans-serif" }}>
                 Moto más vendida · {periodLabel}
               </div>
-              <div className="rounded-lg p-4 mb-3 cursor-pointer" onClick={() => showDrilldown(`Moto: ${byModelo[0].modelo}`, (s) => s.modelo === byModelo[0].modelo)} style={{ background: "#1E2126", border: "1px solid #E4002B" }}>
-                <div className="text-lg font-semibold" style={{ color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}>
+              <div className="rounded-lg p-4 mb-3 cursor-pointer" onClick={() => showDrilldown(`Moto: ${byModelo[0].modelo}`, (s) => s.modelo === byModelo[0].modelo)} style={{ background: "#FFFFFF", border: "1px solid #2563EB" }}>
+                <div className="text-lg font-semibold" style={{ color: "#0F172A", fontFamily: "'Oswald',sans-serif" }}>
                   {byModelo[0].modelo}
                 </div>
-                <div className="text-xs mt-1" style={{ color: "#8A8F98" }}>
+                <div className="text-xs mt-1" style={{ color: "#64748B" }}>
                   {byModelo[0].count} {byModelo[0].count === 1 ? "unidad vendida" : "unidades vendidas"} · {money(byModelo[0].total)}
                 </div>
               </div>
-              <div className="rounded-lg p-4" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+              <div className="rounded-lg p-4" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
                 <ResponsiveContainer width="100%" height={Math.max(140, byModelo.length * 36)}>
                   <BarChart data={byModelo} layout="vertical" margin={{ left: 8, right: 24 }}>
-                    <CartesianGrid horizontal={false} stroke="#2A2E35" />
-                    <XAxis type="number" allowDecimals={false} tick={{ fill: "#8A8F98", fontSize: 11 }} axisLine={{ stroke: "#2A2E35" }} tickLine={false} />
-                    <YAxis dataKey="modelo" type="category" width={110} tick={{ fill: "#C9CDD3", fontSize: 11 }} axisLine={{ stroke: "#2A2E35" }} tickLine={false} />
+                    <CartesianGrid horizontal={false} stroke="#E2E8F0" />
+                    <XAxis type="number" allowDecimals={false} tick={{ fill: "#64748B", fontSize: 11 }} axisLine={{ stroke: "#E2E8F0" }} tickLine={false} />
+                    <YAxis dataKey="modelo" type="category" width={110} tick={{ fill: "#475569", fontSize: 11 }} axisLine={{ stroke: "#E2E8F0" }} tickLine={false} />
                     <Tooltip
                       formatter={(v) => [`${v} unidades`, "Vendidas"]}
-                      contentStyle={{ background: "#1E2126", border: "1px solid #2A2E35", borderRadius: 6, color: "#F2F1EC" }}
-                      labelStyle={{ color: "#F2F1EC" }}
+                      contentStyle={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: 6, color: "#0F172A" }}
+                      labelStyle={{ color: "#0F172A" }}
                     />
                     <Bar dataKey="count" radius={[0, 4, 4, 0]} cursor="pointer" onClick={(data) => showDrilldown(`Moto: ${data.modelo}`, (s) => s.modelo === data.modelo)}>
                       {byModelo.map((_, i) => (
-                        <Cell key={i} fill={i === 0 ? "#FFC72C" : "#E4002B"} />
+                        <Cell key={i} fill={i === 0 ? "#0EA5E9" : "#2563EB"} />
                       ))}
                     </Bar>
                   </BarChart>
@@ -4128,31 +4063,31 @@ function AdminView({ onExit }) {
             </div>
 
             <div>
-              <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-3" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
+              <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-3" style={{ color: "#64748B", fontFamily: "'Oswald',sans-serif" }}>
                 Ventas por canal / origen · {periodLabel}
               </div>
-              <div className="rounded-lg p-4 mb-3 cursor-pointer" onClick={() => showDrilldown(`Canal: ${byCanalVentas[0].origen}`, (s) => s.origen === byCanalVentas[0].origen)} style={{ background: "#1E2126", border: "1px solid #E4002B" }}>
-                <div className="text-lg font-semibold" style={{ color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}>
+              <div className="rounded-lg p-4 mb-3 cursor-pointer" onClick={() => showDrilldown(`Canal: ${byCanalVentas[0].origen}`, (s) => s.origen === byCanalVentas[0].origen)} style={{ background: "#FFFFFF", border: "1px solid #2563EB" }}>
+                <div className="text-lg font-semibold" style={{ color: "#0F172A", fontFamily: "'Oswald',sans-serif" }}>
                   {byCanalVentas[0].origen}
                 </div>
-                <div className="text-xs mt-1" style={{ color: "#8A8F98" }}>
+                <div className="text-xs mt-1" style={{ color: "#64748B" }}>
                   {byCanalVentas[0].count} {byCanalVentas[0].count === 1 ? "venta" : "ventas"} · {money(byCanalVentas[0].total)}
                 </div>
               </div>
-              <div className="rounded-lg p-4" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+              <div className="rounded-lg p-4" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
                 <ResponsiveContainer width="100%" height={Math.max(140, byCanalVentas.length * 36)}>
                   <BarChart data={byCanalVentas} layout="vertical" margin={{ left: 8, right: 24 }}>
-                    <CartesianGrid horizontal={false} stroke="#2A2E35" />
-                    <XAxis type="number" allowDecimals={false} tick={{ fill: "#8A8F98", fontSize: 11 }} axisLine={{ stroke: "#2A2E35" }} tickLine={false} />
-                    <YAxis dataKey="origen" type="category" width={110} tick={{ fill: "#C9CDD3", fontSize: 11 }} axisLine={{ stroke: "#2A2E35" }} tickLine={false} />
+                    <CartesianGrid horizontal={false} stroke="#E2E8F0" />
+                    <XAxis type="number" allowDecimals={false} tick={{ fill: "#64748B", fontSize: 11 }} axisLine={{ stroke: "#E2E8F0" }} tickLine={false} />
+                    <YAxis dataKey="origen" type="category" width={110} tick={{ fill: "#475569", fontSize: 11 }} axisLine={{ stroke: "#E2E8F0" }} tickLine={false} />
                     <Tooltip
                       formatter={(v) => [`${v} ventas`, "Total"]}
-                      contentStyle={{ background: "#1E2126", border: "1px solid #2A2E35", borderRadius: 6, color: "#F2F1EC" }}
-                      labelStyle={{ color: "#F2F1EC" }}
+                      contentStyle={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: 6, color: "#0F172A" }}
+                      labelStyle={{ color: "#0F172A" }}
                     />
                     <Bar dataKey="count" radius={[0, 4, 4, 0]} cursor="pointer" onClick={(data) => showDrilldown(`Canal: ${data.origen}`, (s) => s.origen === data.origen)}>
                       {byCanalVentas.map((_, i) => (
-                        <Cell key={i} fill={i === 0 ? "#FFC72C" : "#E4002B"} />
+                        <Cell key={i} fill={i === 0 ? "#0EA5E9" : "#2563EB"} />
                       ))}
                     </Bar>
                   </BarChart>
@@ -4161,31 +4096,31 @@ function AdminView({ onExit }) {
             </div>
 
             <div>
-              <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-3" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
+              <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-3" style={{ color: "#64748B", fontFamily: "'Oswald',sans-serif" }}>
                 Forma de pago más usada · {periodLabel}
               </div>
-              <div className="rounded-lg p-4 mb-3 cursor-pointer" onClick={() => showDrilldown(`Forma de pago: ${byFormaPago[0].formaPago}`, (s) => s.formaPago === byFormaPago[0].formaPago)} style={{ background: "#1E2126", border: "1px solid #E4002B" }}>
-                <div className="text-lg font-semibold" style={{ color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}>
+              <div className="rounded-lg p-4 mb-3 cursor-pointer" onClick={() => showDrilldown(`Forma de pago: ${byFormaPago[0].formaPago}`, (s) => s.formaPago === byFormaPago[0].formaPago)} style={{ background: "#FFFFFF", border: "1px solid #2563EB" }}>
+                <div className="text-lg font-semibold" style={{ color: "#0F172A", fontFamily: "'Oswald',sans-serif" }}>
                   {byFormaPago[0].formaPago}
                 </div>
-                <div className="text-xs mt-1" style={{ color: "#8A8F98" }}>
+                <div className="text-xs mt-1" style={{ color: "#64748B" }}>
                   {byFormaPago[0].count} {byFormaPago[0].count === 1 ? "venta" : "ventas"} · {money(byFormaPago[0].total)}
                 </div>
               </div>
-              <div className="rounded-lg p-4" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+              <div className="rounded-lg p-4" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
                 <ResponsiveContainer width="100%" height={Math.max(140, byFormaPago.length * 36)}>
                   <BarChart data={byFormaPago} layout="vertical" margin={{ left: 8, right: 24 }}>
-                    <CartesianGrid horizontal={false} stroke="#2A2E35" />
-                    <XAxis type="number" allowDecimals={false} tick={{ fill: "#8A8F98", fontSize: 11 }} axisLine={{ stroke: "#2A2E35" }} tickLine={false} />
-                    <YAxis dataKey="formaPago" type="category" width={110} tick={{ fill: "#C9CDD3", fontSize: 11 }} axisLine={{ stroke: "#2A2E35" }} tickLine={false} />
+                    <CartesianGrid horizontal={false} stroke="#E2E8F0" />
+                    <XAxis type="number" allowDecimals={false} tick={{ fill: "#64748B", fontSize: 11 }} axisLine={{ stroke: "#E2E8F0" }} tickLine={false} />
+                    <YAxis dataKey="formaPago" type="category" width={110} tick={{ fill: "#475569", fontSize: 11 }} axisLine={{ stroke: "#E2E8F0" }} tickLine={false} />
                     <Tooltip
                       formatter={(v) => [`${v} ventas`, "Total"]}
-                      contentStyle={{ background: "#1E2126", border: "1px solid #2A2E35", borderRadius: 6, color: "#F2F1EC" }}
-                      labelStyle={{ color: "#F2F1EC" }}
+                      contentStyle={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: 6, color: "#0F172A" }}
+                      labelStyle={{ color: "#0F172A" }}
                     />
                     <Bar dataKey="count" radius={[0, 4, 4, 0]} cursor="pointer" onClick={(data) => showDrilldown(`Forma de pago: ${data.formaPago}`, (s) => s.formaPago === data.formaPago)}>
                       {byFormaPago.map((_, i) => (
-                        <Cell key={i} fill={i === 0 ? "#FFC72C" : "#E4002B"} />
+                        <Cell key={i} fill={i === 0 ? "#0EA5E9" : "#2563EB"} />
                       ))}
                     </Bar>
                   </BarChart>
@@ -4203,15 +4138,15 @@ function AdminView({ onExit }) {
           >
             <div
               className="rounded-lg p-4 sm:p-5 w-full"
-              style={{ background: "#1E2126", border: "1px solid #E4002B", maxWidth: 880, maxHeight: "85vh", overflowY: "auto" }}
+              style={{ background: "#FFFFFF", border: "1px solid #2563EB", maxWidth: 880, maxHeight: "85vh", overflowY: "auto" }}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
-                <div className="font-semibold uppercase text-xs tracking-[0.12em]" style={{ color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}>
+                <div className="font-semibold uppercase text-xs tracking-[0.12em]" style={{ color: "#0F172A", fontFamily: "'Oswald',sans-serif" }}>
                   {drilldown.titulo}
                 </div>
                 <button onClick={() => setDrilldown(null)} aria-label="Cerrar">
-                  <X size={18} color="#8A8F98" />
+                  <X size={18} color="#64748B" />
                 </button>
               </div>
 
@@ -4227,19 +4162,19 @@ function AdminView({ onExit }) {
                     <option key={a.nombre} value={a.nombre}>{a.nombre}</option>
                   ))}
                 </select>
-                <span className="text-xs" style={{ color: "#8A8F98" }}>
+                <span className="text-xs" style={{ color: "#64748B" }}>
                   {drilldown.ventas.filter((s) => drilldownFiltroAsesor === "Todos" || s.asesor === drilldownFiltroAsesor).length}{" "}
                   {drilldown.ventas.filter((s) => drilldownFiltroAsesor === "Todos" || s.asesor === drilldownFiltroAsesor).length === 1 ? "venta" : "ventas"}
                 </span>
               </div>
 
               {drilldown.ventas.filter((s) => drilldownFiltroAsesor === "Todos" || s.asesor === drilldownFiltroAsesor).length === 0 ? (
-                <div className="text-sm text-center py-6" style={{ color: "#8A8F98" }}>Sin ventas para este filtro.</div>
+                <div className="text-sm text-center py-6" style={{ color: "#64748B" }}>Sin ventas para este filtro.</div>
               ) : (
-                <div className="overflow-x-auto rounded-lg" style={{ border: "1px solid #2A2E35" }}>
+                <div className="overflow-x-auto rounded-lg" style={{ border: "1px solid #E2E8F0" }}>
                   <table className="w-full text-xs" style={{ minWidth: 640 }}>
                     <thead>
-                      <tr style={{ background: "#14161A", color: "#8A8F98" }}>
+                      <tr style={{ background: "#F4F7FB", color: "#64748B" }}>
                         {["Asesor", "Fecha", "Cliente", "Modelo", "Forma de pago", "Origen", "Valor"].map((h) => (
                           <th key={h} className="text-left font-medium uppercase tracking-wide px-3 py-2">{h}</th>
                         ))}
@@ -4249,14 +4184,14 @@ function AdminView({ onExit }) {
                       {drilldown.ventas
                         .filter((s) => drilldownFiltroAsesor === "Todos" || s.asesor === drilldownFiltroAsesor)
                         .map((s, i) => (
-                          <tr key={s.id} style={{ background: i % 2 ? "#1a1d22" : "#1E2126", color: "#F2F1EC" }}>
+                          <tr key={s.id} style={{ background: i % 2 ? "#F8FAFC" : "#FFFFFF", color: "#0F172A" }}>
                             <td className="px-3 py-2 whitespace-nowrap font-medium">{s.asesor}</td>
                             <td className="px-3 py-2 whitespace-nowrap">{s.fecha}</td>
                             <td className="px-3 py-2 whitespace-nowrap">{s.cliente}</td>
                             <td className="px-3 py-2 whitespace-nowrap">{s.modelo}</td>
                             <td className="px-3 py-2 whitespace-nowrap">{s.formaPago}</td>
                             <td className="px-3 py-2 whitespace-nowrap">{s.origen}</td>
-                            <td className="px-3 py-2 whitespace-nowrap font-mono font-semibold" style={{ color: "#FFC72C" }}>{money(s.valor / 1.15)}</td>
+                            <td className="px-3 py-2 whitespace-nowrap font-mono font-semibold" style={{ color: "#0EA5E9" }}>{money(s.valor / 1.15)}</td>
                           </tr>
                         ))}
                     </tbody>
@@ -4268,21 +4203,21 @@ function AdminView({ onExit }) {
         )}
 
         <div>
-          <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-3" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
+          <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-3" style={{ color: "#64748B", fontFamily: "'Oswald',sans-serif" }}>
             Cotizaciones y tasa de cierre · {monthLabel(monthKey)}
           </div>
 
-          <div className="rounded-lg p-4 sm:p-5 flex flex-col gap-3" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+          <div className="rounded-lg p-4 sm:p-5 flex flex-col gap-3" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
               <label
                 className="flex items-center justify-center gap-2 rounded-md px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.08em] cursor-pointer shrink-0"
-                style={{ background: "#E4002B", color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}
+                style={{ background: "#2563EB", color: "#0F172A", fontFamily: "'Oswald',sans-serif" }}
               >
                 {uploadingQuotes ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
                 Subir Excel de cotizados
                 <input type="file" accept=".xlsx,.xls,.csv" onChange={handleQuotesUpload} className="hidden" disabled={uploadingQuotes} />
               </label>
-              <div className="text-xs" style={{ color: "#8A8F98" }}>
+              <div className="text-xs" style={{ color: "#64748B" }}>
                 {quotes.length > 0 ? (
                   <>
                     <FileSpreadsheet size={12} className="inline mr-1" style={{ verticalAlign: "-2px" }} />
@@ -4294,17 +4229,17 @@ function AdminView({ onExit }) {
               </div>
             </div>
             {quotesError && (
-              <div className="text-xs rounded-md px-3 py-2" style={{ color: "#FFD3D3", background: "#3A1F1F", border: "1px solid #E4002B" }}>
+              <div className="text-xs rounded-md px-3 py-2" style={{ color: "#B91C1C", background: "#FEF2F2", border: "1px solid #DC2626" }}>
                 {quotesError}
               </div>
             )}
             {quotes.length > 0 && (
-              <div className="text-[11px]" style={{ color: "#8A8F98" }}>
+              <div className="text-[11px]" style={{ color: "#64748B" }}>
                 Subir un nuevo archivo reemplaza las cotizaciones cargadas este mes.
               </div>
             )}
             {discardedQuotesCount > 0 && (
-              <div className="text-xs rounded-md px-3 py-2" style={{ color: "#FFE9B3", background: "#3A2E1F", border: "1px solid #FFC72C" }}>
+              <div className="text-xs rounded-md px-3 py-2" style={{ color: "#C2410C", background: "#FFF7ED", border: "1px solid #FDBA74" }}>
                 {discardedQuotesCount} fila{discardedQuotesCount === 1 ? "" : "s"} descartada{discardedQuotesCount === 1 ? "" : "s"} por no pertenecer a Adrian, Fernanda o Steven.
               </div>
             )}
@@ -4313,31 +4248,31 @@ function AdminView({ onExit }) {
           {quotes.length > 0 && (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
-                <div className="rounded-lg p-4 flex flex-col justify-center gap-1" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
-                  <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#8A8F98" }}>Tasa de cierre global</span>
-                  <span className="font-mono font-semibold text-2xl" style={{ color: "#FFC72C" }}>
+                <div className="rounded-lg p-4 flex flex-col justify-center gap-1" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
+                  <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#64748B" }}>Tasa de cierre global</span>
+                  <span className="font-mono font-semibold text-2xl" style={{ color: "#0EA5E9" }}>
                     {tasaCierreGlobal === null ? "—" : `${Math.round(tasaCierreGlobal)}%`}
                   </span>
-                  <span className="text-xs mt-1" style={{ color: "#8A8F98" }}>
+                  <span className="text-xs mt-1" style={{ color: "#64748B" }}>
                     {monthSales.length} ventas / {totalQuotesMonth} cotizados
                   </span>
                 </div>
-                <div className="rounded-lg p-4 flex flex-col justify-center gap-1" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
-                  <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#8A8F98" }}>Clientes por venta</span>
-                  <span className="font-mono font-semibold text-2xl" style={{ color: "#F2F1EC" }}>
+                <div className="rounded-lg p-4 flex flex-col justify-center gap-1" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
+                  <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#64748B" }}>Clientes por venta</span>
+                  <span className="font-mono font-semibold text-2xl" style={{ color: "#0F172A" }}>
                     {tasaCierreGlobal === null || tasaCierreGlobal === 0 ? "—" : (100 / tasaCierreGlobal).toFixed(1)}
                   </span>
-                  <span className="text-xs mt-1" style={{ color: "#8A8F98" }}>
+                  <span className="text-xs mt-1" style={{ color: "#64748B" }}>
                     clientes atendidos, en promedio, por cada moto vendida
                   </span>
                 </div>
-                <div className="rounded-lg p-4" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
-                  <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#8A8F98" }}>Cotizados por canal</span>
+                <div className="rounded-lg p-4" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
+                  <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#64748B" }}>Cotizados por canal</span>
                   <div className="flex flex-col gap-1.5 mt-2">
                     {quotesByCanal.map((c) => (
                       <div key={c.canal} className="flex items-center justify-between text-xs">
-                        <span style={{ color: "#C9CDD3" }}>{c.canal}</span>
-                        <span className="font-mono" style={{ color: "#F2F1EC" }}>{c.count}</span>
+                        <span style={{ color: "#475569" }}>{c.canal}</span>
+                        <span className="font-mono" style={{ color: "#0F172A" }}>{c.count}</span>
                       </div>
                     ))}
                   </div>
@@ -4346,15 +4281,15 @@ function AdminView({ onExit }) {
 
               <div className="mt-3 flex flex-col gap-2">
                 {asesorPerformance.map((a) => (
-                  <div key={a.asesor} className="flex items-center justify-between rounded-lg px-4 py-2.5 flex-wrap gap-2" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
-                    <span className="text-sm font-medium" style={{ color: "#F2F1EC" }}>{a.asesor}</span>
-                    <div className="flex items-center gap-4 text-xs" style={{ color: "#8A8F98" }}>
+                  <div key={a.asesor} className="flex items-center justify-between rounded-lg px-4 py-2.5 flex-wrap gap-2" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
+                    <span className="text-sm font-medium" style={{ color: "#0F172A" }}>{a.asesor}</span>
+                    <div className="flex items-center gap-4 text-xs" style={{ color: "#64748B" }}>
                       <span>{a.cotizaciones} cotizados</span>
                       <span>{a.ventasCerradas} ventas</span>
-                      <span className="font-mono font-semibold" style={{ color: a.tasaCierre === null ? "#8A8F98" : "#FFC72C" }}>
+                      <span className="font-mono font-semibold" style={{ color: a.tasaCierre === null ? "#64748B" : "#0EA5E9" }}>
                         {a.tasaCierre === null ? "Sin cotizados" : `${Math.round(a.tasaCierre)}% cierre`}
                       </span>
-                      <span className="font-mono" style={{ color: "#8A8F98" }}>
+                      <span className="font-mono" style={{ color: "#64748B" }}>
                         {a.tasaCierre === null || a.tasaCierre === 0 ? "—" : `${(100 / a.tasaCierre).toFixed(1)} clientes/venta`}
                       </span>
                     </div>
@@ -4363,13 +4298,13 @@ function AdminView({ onExit }) {
               </div>
 
               <div className="mt-4">
-                <div className="text-[11px] uppercase tracking-[0.12em] font-medium mb-2" style={{ color: "#8A8F98" }}>
+                <div className="text-[11px] uppercase tracking-[0.12em] font-medium mb-2" style={{ color: "#64748B" }}>
                   Clientes cotizados por asesor y canal
                 </div>
-                <div className="overflow-x-auto rounded-lg" style={{ border: "1px solid #2A2E35" }}>
+                <div className="overflow-x-auto rounded-lg" style={{ border: "1px solid #E2E8F0" }}>
                   <table className="w-full text-xs" style={{ minWidth: 420 }}>
                     <thead>
-                      <tr style={{ background: "#1E2126", color: "#8A8F98" }}>
+                      <tr style={{ background: "#FFFFFF", color: "#64748B" }}>
                         <th className="text-left font-medium uppercase tracking-wide px-3 py-2.5">Asesor</th>
                         {canalNames.map((c) => (
                           <th key={c} className="text-right font-medium uppercase tracking-wide px-3 py-2.5 whitespace-nowrap">{c}</th>
@@ -4385,29 +4320,29 @@ function AdminView({ onExit }) {
                       })
                         .sort((a, b) => b.total - a.total)
                         .map((a, i) => (
-                          <tr key={a.nombre} style={{ background: i % 2 ? "#1a1d22" : "#1E2126", color: "#F2F1EC" }}>
+                          <tr key={a.nombre} style={{ background: i % 2 ? "#F8FAFC" : "#FFFFFF", color: "#0F172A" }}>
                             <td className="px-3 py-2.5 whitespace-nowrap font-medium">{a.nombre}</td>
                             {canalNames.map((c) => (
-                              <td key={c} className="px-3 py-2.5 text-right font-mono" style={{ color: a.row[c] ? "#F2F1EC" : "#4A4E56" }}>
+                              <td key={c} className="px-3 py-2.5 text-right font-mono" style={{ color: a.row[c] ? "#0F172A" : "#94A3B8" }}>
                                 {a.row[c] || 0}
                               </td>
                             ))}
-                            <td className="px-3 py-2.5 text-right font-mono font-semibold" style={{ color: "#FFC72C" }}>{a.total}</td>
+                            <td className="px-3 py-2.5 text-right font-mono font-semibold" style={{ color: "#0EA5E9" }}>{a.total}</td>
                           </tr>
                         ))}
                     </tbody>
                     <tfoot>
-                      <tr style={{ background: "#14161A", borderTop: "1px solid #2A2E35" }}>
-                        <td className="px-3 py-2.5 whitespace-nowrap font-semibold" style={{ color: "#8A8F98" }}>Total</td>
+                      <tr style={{ background: "#F4F7FB", borderTop: "1px solid #E2E8F0" }}>
+                        <td className="px-3 py-2.5 whitespace-nowrap font-semibold" style={{ color: "#64748B" }}>Total</td>
                         {canalNames.map((c) => {
                           const colTotal = ASESORES.reduce((sum, a) => sum + ((quotesMatrix[a.nombre] || {})[c] || 0), 0);
                           return (
-                            <td key={c} className="px-3 py-2.5 text-right font-mono font-semibold" style={{ color: "#F2F1EC" }}>
+                            <td key={c} className="px-3 py-2.5 text-right font-mono font-semibold" style={{ color: "#0F172A" }}>
                               {colTotal}
                             </td>
                           );
                         })}
-                        <td className="px-3 py-2.5 text-right font-mono font-bold" style={{ color: "#FFC72C" }}>
+                        <td className="px-3 py-2.5 text-right font-mono font-bold" style={{ color: "#0EA5E9" }}>
                           {ASESORES.reduce((sum, a) => sum + canalNames.reduce((s2, c) => s2 + ((quotesMatrix[a.nombre] || {})[c] || 0), 0), 0)}
                         </td>
                       </tr>
@@ -4421,10 +4356,10 @@ function AdminView({ onExit }) {
 
         <div>
           <div className="flex items-center justify-between mb-3">
-            <div className="font-semibold uppercase text-xs tracking-[0.12em]" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
+            <div className="font-semibold uppercase text-xs tracking-[0.12em]" style={{ color: "#64748B", fontFamily: "'Oswald',sans-serif" }}>
               Todas las transacciones · {periodLabel}
             </div>
-            <button onClick={exportCSV} disabled={!filteredSales.length} className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md disabled:opacity-40" style={{ color: "#C9CDD3", border: "1px solid #2A2E35" }}>
+            <button onClick={exportCSV} disabled={!filteredSales.length} className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md disabled:opacity-40" style={{ color: "#475569", border: "1px solid #E2E8F0" }}>
               <Download size={13} /> CSV
             </button>
           </div>
@@ -4435,14 +4370,14 @@ function AdminView({ onExit }) {
           </select>
 
           {filteredSales.length === 0 ? (
-            <div className="text-sm text-center py-8 rounded-lg" style={{ color: "#8A8F98", background: "#1E2126", border: "1px dashed #2A2E35" }}>
+            <div className="text-sm text-center py-8 rounded-lg" style={{ color: "#64748B", background: "#FFFFFF", border: "1px dashed #E2E8F0" }}>
               No hay ventas registradas todavía.
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-lg" style={{ border: "1px solid #2A2E35" }}>
+            <div className="overflow-x-auto rounded-lg" style={{ border: "1px solid #E2E8F0" }}>
               <table className="w-full text-xs" style={{ minWidth: 880 }}>
                 <thead>
-                  <tr style={{ background: "#1E2126", color: "#8A8F98" }}>
+                  <tr style={{ background: "#FFFFFF", color: "#64748B" }}>
                     {["N°", "Asesor", "Factura", "Fecha", "Cliente", "Modelo", "Pago", "Origen", "Valor", "Entrega", "Observaciones"].map((h) => (
                       <th key={h} className="text-left font-medium uppercase tracking-wide px-3 py-2.5">{h}</th>
                     ))}
@@ -4457,12 +4392,12 @@ function AdminView({ onExit }) {
                     <tr
                       key={s.id}
                       style={{
-                        background: completo ? "rgba(46, 125, 50, 0.18)" : i % 2 ? "#1a1d22" : "#1E2126",
-                        color: "#F2F1EC",
-                        borderLeft: completo ? "3px solid #2E7D32" : "3px solid transparent",
+                        background: completo ? "rgba(22, 163, 74, 0.12)" : i % 2 ? "#F8FAFC" : "#FFFFFF",
+                        color: "#0F172A",
+                        borderLeft: completo ? "3px solid #16A34A" : "3px solid transparent",
                       }}
                     >
-                      <td className="px-3 py-2.5 whitespace-nowrap font-mono" style={{ color: "#8A8F98" }}>{salesNumberById[s.id]}</td>
+                      <td className="px-3 py-2.5 whitespace-nowrap font-mono" style={{ color: "#64748B" }}>{salesNumberById[s.id]}</td>
                       <td className="px-3 py-2.5 whitespace-nowrap">{s.asesor}</td>
                       <td className="px-3 py-2.5 whitespace-nowrap">{s.factura}</td>
                       <td className="px-3 py-2.5 whitespace-nowrap">{s.fecha}</td>
@@ -4473,7 +4408,7 @@ function AdminView({ onExit }) {
                             value={s.modelo}
                             onChange={(e) => updateSaleModelo(s.id, e.target.value)}
                             className="rounded px-1.5 py-1 text-xs outline-none"
-                            style={{ background: "#14161A", border: "1px solid #2A2E35", color: "#F2F1EC" }}
+                            style={{ background: "#F4F7FB", border: "1px solid #E2E8F0", color: "#0F172A" }}
                           >
                             {!MODELOS_MOTO.includes(s.modelo) && s.modelo && (
                               <option value={s.modelo}>{s.modelo}</option>
@@ -4487,29 +4422,29 @@ function AdminView({ onExit }) {
                             value={s.modelo}
                             onChange={(e) => updateSaleModelo(s.id, e.target.value)}
                             className="rounded px-1.5 py-1 text-xs outline-none"
-                            style={{ background: "#14161A", border: "1px solid #2A2E35", color: "#F2F1EC", width: 140 }}
+                            style={{ background: "#F4F7FB", border: "1px solid #E2E8F0", color: "#0F172A", width: 140 }}
                           />
                         )}
                       </td>
                       <td className="px-3 py-2.5 whitespace-nowrap">{s.formaPago}</td>
                       <td className="px-3 py-2.5 whitespace-nowrap">{s.origen}</td>
-                      <td className="px-3 py-2.5 whitespace-nowrap font-mono font-semibold" style={{ color: "#FFC72C" }}>{money(s.valor)}</td>
+                      <td className="px-3 py-2.5 whitespace-nowrap font-mono font-semibold" style={{ color: "#0EA5E9" }}>{money(s.valor)}</td>
                       <td className="px-3 py-2.5 whitespace-nowrap">
                         {!isMoto(s) ? (
-                          <span style={{ color: "#4A4E56" }}>—</span>
+                          <span style={{ color: "#94A3B8" }}>—</span>
                         ) : completo ? (
-                          <span className="flex items-center gap-1 font-medium" style={{ color: "#8FD98F" }}>
+                          <span className="flex items-center gap-1 font-medium" style={{ color: "#16A34A" }}>
                             ✓ Completado
                           </span>
                         ) : currentStep ? (
-                          <span style={{ color: "#FFC72C" }}>
+                          <span style={{ color: "#0EA5E9" }}>
                             {progress.done}/{progress.total} · {currentStep.label}
                           </span>
                         ) : (
-                          <span style={{ color: "#8A8F98" }}>Sin iniciar</span>
+                          <span style={{ color: "#64748B" }}>Sin iniciar</span>
                         )}
                       </td>
-                      <td className="px-3 py-2.5" style={{ color: "#8A8F98", maxWidth: 220 }}>{s.observaciones || "—"}</td>
+                      <td className="px-3 py-2.5" style={{ color: "#64748B", maxWidth: 220 }}>{s.observaciones || "—"}</td>
                     </tr>
                     );
                   })}
@@ -4523,11 +4458,11 @@ function AdminView({ onExit }) {
 
         {adminTab === "caja" && (
         <>
-        <div className="rounded-lg p-4 sm:p-5" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
-          <div className="font-semibold uppercase text-xs tracking-[0.14em] mb-1" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
+        <div className="rounded-lg p-4 sm:p-5" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
+          <div className="font-semibold uppercase text-xs tracking-[0.14em] mb-1" style={{ color: "#64748B", fontFamily: "'Oswald',sans-serif" }}>
             Ver por día
           </div>
-          <div className="text-[11px] mb-3" style={{ color: "#8A8F98" }}>
+          <div className="text-[11px] mb-3" style={{ color: "#64748B" }}>
             El control de caja se hace diario — elige un día en el calendario, o revisa todos juntos.
           </div>
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
@@ -4543,7 +4478,7 @@ function AdminView({ onExit }) {
                 type="button"
                 onClick={() => setCajaDayFilter("todos")}
                 className="text-xs px-3 py-2 rounded-md self-start"
-                style={{ color: "#C9CDD3", border: "1px solid #2A2E35" }}
+                style={{ color: "#475569", border: "1px solid #E2E8F0" }}
               >
                 Ver todos los días · {periodLabel}
               </button>
@@ -4551,7 +4486,7 @@ function AdminView({ onExit }) {
           </div>
 
           {registeredCajaDays.length === 0 ? (
-            <div className="text-xs mt-3" style={{ color: "#8A8F98" }}>
+            <div className="text-xs mt-3" style={{ color: "#64748B" }}>
               No hay días con movimientos de caja en este periodo todavía.
             </div>
           ) : (
@@ -4563,9 +4498,9 @@ function AdminView({ onExit }) {
                   onClick={() => setCajaDayFilter(d)}
                   className="text-xs px-2.5 py-1.5 rounded-md"
                   style={{
-                    background: cajaDayFilter === d ? "#E4002B" : "#14161A",
-                    color: cajaDayFilter === d ? "#F2F1EC" : "#8A8F98",
-                    border: `1px solid ${cajaDayFilter === d ? "#E4002B" : "#2A2E35"}`,
+                    background: cajaDayFilter === d ? "#2563EB" : "#F4F7FB",
+                    color: cajaDayFilter === d ? "#0F172A" : "#64748B",
+                    border: `1px solid ${cajaDayFilter === d ? "#2563EB" : "#E2E8F0"}`,
                   }}
                 >
                   {d}
@@ -4576,34 +4511,34 @@ function AdminView({ onExit }) {
         </div>
 
         <div>
-          <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-3" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
+          <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-3" style={{ color: "#64748B", fontFamily: "'Oswald',sans-serif" }}>
             Caja · comprobantes · {cajaDayFilter === "todos" ? periodLabel : cajaDayFilter}
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-3">
-            <div className="rounded-lg p-4 flex flex-col justify-center gap-1" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
-              <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#8A8F98" }}>Total valor</span>
-              <span className="font-mono font-semibold text-lg" style={{ color: "#F2F1EC" }}>{moneyExact(cajaTotalsFiltered.valor)}</span>
+            <div className="rounded-lg p-4 flex flex-col justify-center gap-1" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
+              <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#64748B" }}>Total valor</span>
+              <span className="font-mono font-semibold text-lg" style={{ color: "#0F172A" }}>{moneyExact(cajaTotalsFiltered.valor)}</span>
             </div>
-            <div className="rounded-lg p-4 flex flex-col justify-center gap-1" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
-              <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#8A8F98" }}>Total Portcoll</span>
-              <span className="font-mono font-semibold text-lg" style={{ color: "#F2F1EC" }}>{moneyExact(cajaTotalsFiltered.portcoll)}</span>
+            <div className="rounded-lg p-4 flex flex-col justify-center gap-1" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
+              <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#64748B" }}>Total Portcoll</span>
+              <span className="font-mono font-semibold text-lg" style={{ color: "#0F172A" }}>{moneyExact(cajaTotalsFiltered.portcoll)}</span>
             </div>
-            <div className="rounded-lg p-4 flex flex-col justify-center gap-1 col-span-2 sm:col-span-1" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
-              <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#8A8F98" }}>Sin revisar</span>
-              <span className="font-mono font-semibold text-lg" style={{ color: cajaTotalsFiltered.pendientes > 0 ? "#FFC72C" : "#F2F1EC" }}>{cajaTotalsFiltered.pendientes}</span>
+            <div className="rounded-lg p-4 flex flex-col justify-center gap-1 col-span-2 sm:col-span-1" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
+              <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#64748B" }}>Sin revisar</span>
+              <span className="font-mono font-semibold text-lg" style={{ color: cajaTotalsFiltered.pendientes > 0 ? "#0EA5E9" : "#0F172A" }}>{cajaTotalsFiltered.pendientes}</span>
             </div>
           </div>
 
           {cajaInPeriodFiltered.length === 0 ? (
-            <div className="text-sm text-center py-8 rounded-lg" style={{ color: "#8A8F98", background: "#1E2126", border: "1px dashed #2A2E35" }}>
+            <div className="text-sm text-center py-8 rounded-lg" style={{ color: "#64748B", background: "#FFFFFF", border: "1px dashed #E2E8F0" }}>
               No hay comprobantes registrados en este periodo.
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-lg" style={{ border: "1px solid #2A2E35" }}>
+            <div className="overflow-x-auto rounded-lg" style={{ border: "1px solid #E2E8F0" }}>
               <table className="w-full text-xs" style={{ minWidth: 840 }}>
                 <thead>
-                  <tr style={{ background: "#1E2126", color: "#8A8F98" }}>
+                  <tr style={{ background: "#FFFFFF", color: "#64748B" }}>
                     {["Fecha", "Responsable", "Comprobante", "Cliente", "Portcoll", "Valor", "Ingresado", "Revisado", "Observaciones"].map((h) => (
                       <th key={h} className="text-left font-medium uppercase tracking-wide px-3 py-2.5">{h}</th>
                     ))}
@@ -4613,16 +4548,16 @@ function AdminView({ onExit }) {
                   {[...cajaInPeriodFiltered]
                     .sort((a, b) => (a.fecha < b.fecha ? 1 : -1))
                     .map((e, i) => (
-                      <tr key={e.id} style={{ background: i % 2 ? "#1a1d22" : "#1E2126", color: "#F2F1EC" }}>
+                      <tr key={e.id} style={{ background: i % 2 ? "#F8FAFC" : "#FFFFFF", color: "#0F172A" }}>
                         <td className="px-3 py-2.5 whitespace-nowrap">{e.fecha}</td>
-                        <td className="px-3 py-2.5 whitespace-nowrap" style={{ color: "#8A8F98" }}>{e.cajera || "—"}</td>
+                        <td className="px-3 py-2.5 whitespace-nowrap" style={{ color: "#64748B" }}>{e.cajera || "—"}</td>
                         <td className="px-3 py-2.5 whitespace-nowrap">{e.comprobante}</td>
                         <td className="px-3 py-2.5 whitespace-nowrap">{e.cliente}</td>
                         <td className="px-3 py-2.5 whitespace-nowrap font-mono">{moneyExact(Number(e.portcoll) || 0)}</td>
-                        <td className="px-3 py-2.5 whitespace-nowrap font-mono font-semibold" style={{ color: "#FFC72C" }}>{moneyExact(Number(e.valor) || 0)}</td>
+                        <td className="px-3 py-2.5 whitespace-nowrap font-mono font-semibold" style={{ color: "#0EA5E9" }}>{moneyExact(Number(e.valor) || 0)}</td>
                         <td className="px-3 py-2.5 whitespace-nowrap">{e.ingresado ? "✓" : "—"}</td>
                         <td className="px-3 py-2.5 whitespace-nowrap">{e.revisado ? "✓" : "—"}</td>
-                        <td className="px-3 py-2.5" style={{ color: "#8A8F98", maxWidth: 200 }}>{e.observaciones || "—"}</td>
+                        <td className="px-3 py-2.5" style={{ color: "#64748B", maxWidth: 200 }}>{e.observaciones || "—"}</td>
                       </tr>
                     ))}
                 </tbody>
@@ -4632,25 +4567,25 @@ function AdminView({ onExit }) {
         </div>
 
         <div>
-          <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-3" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
+          <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-3" style={{ color: "#64748B", fontFamily: "'Oswald',sans-serif" }}>
             Transferencias · {periodLabel}
           </div>
 
-          <div className="rounded-lg p-4 flex flex-col justify-center gap-1 mb-3" style={{ background: "#1E2126", border: "1px solid #2A2E35", maxWidth: 280 }}>
-            <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#8A8F98" }}>Total transferencias</span>
-            <span className="font-mono font-semibold text-lg" style={{ color: "#F2F1EC" }}>{moneyExact(totalTransferenciasFiltered)}</span>
-            <span className="text-xs mt-1" style={{ color: "#8A8F98" }}>{transfersInPeriodFiltered.length} {transfersInPeriodFiltered.length === 1 ? "registro" : "registros"}</span>
+          <div className="rounded-lg p-4 flex flex-col justify-center gap-1 mb-3" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", maxWidth: 280 }}>
+            <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#64748B" }}>Total transferencias</span>
+            <span className="font-mono font-semibold text-lg" style={{ color: "#0F172A" }}>{moneyExact(totalTransferenciasFiltered)}</span>
+            <span className="text-xs mt-1" style={{ color: "#64748B" }}>{transfersInPeriodFiltered.length} {transfersInPeriodFiltered.length === 1 ? "registro" : "registros"}</span>
           </div>
 
           {transfersInPeriodFiltered.length === 0 ? (
-            <div className="text-sm text-center py-8 rounded-lg" style={{ color: "#8A8F98", background: "#1E2126", border: "1px dashed #2A2E35" }}>
+            <div className="text-sm text-center py-8 rounded-lg" style={{ color: "#64748B", background: "#FFFFFF", border: "1px dashed #E2E8F0" }}>
               Sin transferencias registradas en este periodo.
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-lg" style={{ border: "1px solid #2A2E35" }}>
+            <div className="overflow-x-auto rounded-lg" style={{ border: "1px solid #E2E8F0" }}>
               <table className="text-xs" style={{ width: "100%", maxWidth: 480 }}>
                 <thead>
-                  <tr style={{ background: "#1E2126", color: "#8A8F98" }}>
+                  <tr style={{ background: "#FFFFFF", color: "#64748B" }}>
                     <th className="text-left font-medium uppercase tracking-wide px-3 py-2.5">Fecha</th>
                     <th className="text-left font-medium uppercase tracking-wide px-3 py-2.5">Responsable</th>
                     <th className="text-left font-medium uppercase tracking-wide px-3 py-2.5">N°</th>
@@ -4661,11 +4596,11 @@ function AdminView({ onExit }) {
                   {[...transfersInPeriodFiltered]
                     .sort((a, b) => (a.fecha < b.fecha ? 1 : -1))
                     .map((t, i) => (
-                      <tr key={t.id} style={{ background: i % 2 ? "#1a1d22" : "#1E2126", color: "#F2F1EC" }}>
+                      <tr key={t.id} style={{ background: i % 2 ? "#F8FAFC" : "#FFFFFF", color: "#0F172A" }}>
                         <td className="px-3 py-2.5 whitespace-nowrap">{t.fecha}</td>
-                        <td className="px-3 py-2.5 whitespace-nowrap" style={{ color: "#8A8F98" }}>{t.cajera || "—"}</td>
-                        <td className="px-3 py-2.5 whitespace-nowrap" style={{ color: "#8A8F98" }}>{i + 1}</td>
-                        <td className="px-3 py-2.5 whitespace-nowrap font-mono font-semibold" style={{ color: "#FFC72C" }}>{moneyExact(Number(t.valor) || 0)}</td>
+                        <td className="px-3 py-2.5 whitespace-nowrap" style={{ color: "#64748B" }}>{t.cajera || "—"}</td>
+                        <td className="px-3 py-2.5 whitespace-nowrap" style={{ color: "#64748B" }}>{i + 1}</td>
+                        <td className="px-3 py-2.5 whitespace-nowrap font-mono font-semibold" style={{ color: "#0EA5E9" }}>{moneyExact(Number(t.valor) || 0)}</td>
                       </tr>
                     ))}
                 </tbody>
@@ -4675,25 +4610,25 @@ function AdminView({ onExit }) {
         </div>
 
         <div>
-          <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-3" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
+          <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-3" style={{ color: "#64748B", fontFamily: "'Oswald',sans-serif" }}>
             Egresos de caja · {periodLabel}
           </div>
 
-          <div className="rounded-lg p-4 flex flex-col justify-center gap-1 mb-3" style={{ background: "#1E2126", border: "1px solid #2A2E35", maxWidth: 280 }}>
-            <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#8A8F98" }}>Total egresos</span>
-            <span className="font-mono font-semibold text-lg" style={{ color: "#F2F1EC" }}>{moneyExact(totalEgresosFiltered)}</span>
-            <span className="text-xs mt-1" style={{ color: "#8A8F98" }}>{egresosInPeriodFiltered.length} {egresosInPeriodFiltered.length === 1 ? "registro" : "registros"}</span>
+          <div className="rounded-lg p-4 flex flex-col justify-center gap-1 mb-3" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", maxWidth: 280 }}>
+            <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#64748B" }}>Total egresos</span>
+            <span className="font-mono font-semibold text-lg" style={{ color: "#0F172A" }}>{moneyExact(totalEgresosFiltered)}</span>
+            <span className="text-xs mt-1" style={{ color: "#64748B" }}>{egresosInPeriodFiltered.length} {egresosInPeriodFiltered.length === 1 ? "registro" : "registros"}</span>
           </div>
 
           {egresosInPeriodFiltered.length === 0 ? (
-            <div className="text-sm text-center py-8 rounded-lg" style={{ color: "#8A8F98", background: "#1E2126", border: "1px dashed #2A2E35" }}>
+            <div className="text-sm text-center py-8 rounded-lg" style={{ color: "#64748B", background: "#FFFFFF", border: "1px dashed #E2E8F0" }}>
               Sin egresos registrados en este periodo.
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-lg" style={{ border: "1px solid #2A2E35" }}>
+            <div className="overflow-x-auto rounded-lg" style={{ border: "1px solid #E2E8F0" }}>
               <table className="w-full text-xs">
                 <thead>
-                  <tr style={{ background: "#1E2126", color: "#8A8F98" }}>
+                  <tr style={{ background: "#FFFFFF", color: "#64748B" }}>
                     <th className="text-left font-medium uppercase tracking-wide px-3 py-2.5">Fecha</th>
                     <th className="text-left font-medium uppercase tracking-wide px-3 py-2.5">Responsable</th>
                     <th className="text-right font-medium uppercase tracking-wide px-3 py-2.5">Valor</th>
@@ -4704,10 +4639,10 @@ function AdminView({ onExit }) {
                   {[...egresosInPeriodFiltered]
                     .sort((a, b) => (a.fecha < b.fecha ? 1 : -1))
                     .map((g, i) => (
-                      <tr key={g.id} style={{ background: i % 2 ? "#1a1d22" : "#1E2126", color: "#F2F1EC" }}>
+                      <tr key={g.id} style={{ background: i % 2 ? "#F8FAFC" : "#FFFFFF", color: "#0F172A" }}>
                         <td className="px-3 py-2.5 whitespace-nowrap">{g.fecha}</td>
-                        <td className="px-3 py-2.5 whitespace-nowrap" style={{ color: "#8A8F98" }}>{g.cajera || "—"}</td>
-                        <td className="px-3 py-2.5 whitespace-nowrap font-mono font-semibold" style={{ color: "#FFC72C" }}>{moneyExact(Number(g.valor) || 0)}</td>
+                        <td className="px-3 py-2.5 whitespace-nowrap" style={{ color: "#64748B" }}>{g.cajera || "—"}</td>
+                        <td className="px-3 py-2.5 whitespace-nowrap font-mono font-semibold" style={{ color: "#0EA5E9" }}>{moneyExact(Number(g.valor) || 0)}</td>
                         <td className="px-3 py-2.5">{g.motivo || "—"}</td>
                       </tr>
                     ))}
@@ -4723,7 +4658,7 @@ function AdminView({ onExit }) {
         <>
         <div>
           <div className="flex items-center justify-between mb-3">
-            <div className="font-semibold uppercase text-xs tracking-[0.12em]" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
+            <div className="font-semibold uppercase text-xs tracking-[0.12em]" style={{ color: "#64748B", fontFamily: "'Oswald',sans-serif" }}>
               Proyecciones de todo el equipo
             </div>
             <div className="flex items-center gap-2">
@@ -4731,7 +4666,7 @@ function AdminView({ onExit }) {
                 onClick={exportProyeccionesExcel}
                 disabled={!proyecciones.length}
                 className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md disabled:opacity-40"
-                style={{ color: "#C9CDD3", border: "1px solid #2A2E35" }}
+                style={{ color: "#475569", border: "1px solid #E2E8F0" }}
               >
                 <Download size={13} /> Excel
               </button>
@@ -4739,55 +4674,55 @@ function AdminView({ onExit }) {
                 onClick={handleDeleteAllProyecciones}
                 disabled={!proyecciones.length}
                 className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md disabled:opacity-40"
-                style={{ color: "#FF8A8A", border: "1px solid #E4002B" }}
+                style={{ color: "#DC2626", border: "1px solid #2563EB" }}
               >
                 <Trash2 size={13} /> Borrar todas
               </button>
             </div>
           </div>
 
-          <div className="rounded-lg p-4 flex flex-col justify-center gap-1 mb-3" style={{ background: "#1E2126", border: "1px solid #2A2E35", maxWidth: 320 }}>
-            <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#8A8F98" }}>Total proyectado</span>
-            <span className="font-mono font-semibold text-lg" style={{ color: "#F2F1EC" }}>{money(totalProyeccionesGlobal)}</span>
-            <span className="text-xs mt-1" style={{ color: "#8A8F98" }}>{proyecciones.length} {proyecciones.length === 1 ? "proyección" : "proyecciones"} en proceso</span>
+          <div className="rounded-lg p-4 flex flex-col justify-center gap-1 mb-3" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", maxWidth: 320 }}>
+            <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#64748B" }}>Total proyectado</span>
+            <span className="font-mono font-semibold text-lg" style={{ color: "#0F172A" }}>{money(totalProyeccionesGlobal)}</span>
+            <span className="text-xs mt-1" style={{ color: "#64748B" }}>{proyecciones.length} {proyecciones.length === 1 ? "proyección" : "proyecciones"} en proceso</span>
           </div>
 
-          <div className="rounded-lg p-4 sm:p-5 mb-4" style={{ background: "#1E2126", border: "1px solid #E4002B", maxWidth: 420 }}>
+          <div className="rounded-lg p-4 sm:p-5 mb-4" style={{ background: "#FFFFFF", border: "1px solid #2563EB", maxWidth: 420 }}>
             <div className="flex items-center justify-between text-xs mb-1.5">
-              <span style={{ color: "#8A8F98" }}>Total vendido global · {periodLabel}</span>
-              <span className="font-mono" style={{ color: "#F2F1EC" }}>{money(totalGlobal / 1.15)}</span>
+              <span style={{ color: "#64748B" }}>Total vendido global · {periodLabel}</span>
+              <span className="font-mono" style={{ color: "#0F172A" }}>{money(totalGlobal / 1.15)}</span>
             </div>
             <div className="flex items-center justify-between text-xs mb-1.5">
-              <span style={{ color: "#8A8F98" }}>+ Total proyectado</span>
-              <span className="font-mono" style={{ color: "#F2F1EC" }}>{money(totalProyeccionesGlobal)}</span>
+              <span style={{ color: "#64748B" }}>+ Total proyectado</span>
+              <span className="font-mono" style={{ color: "#0F172A" }}>{money(totalProyeccionesGlobal)}</span>
             </div>
-            <div className="flex items-center justify-between text-sm mt-2 pt-2" style={{ borderTop: "1px solid #2A2E35" }}>
-              <span className="font-medium" style={{ color: "#F2F1EC" }}>Si facturan todo</span>
-              <span className="font-mono font-bold text-lg" style={{ color: "#FFC72C" }}>{money(totalGlobal / 1.15 + totalProyeccionesGlobal)}</span>
+            <div className="flex items-center justify-between text-sm mt-2 pt-2" style={{ borderTop: "1px solid #E2E8F0" }}>
+              <span className="font-medium" style={{ color: "#0F172A" }}>Si facturan todo</span>
+              <span className="font-mono font-bold text-lg" style={{ color: "#0EA5E9" }}>{money(totalGlobal / 1.15 + totalProyeccionesGlobal)}</span>
             </div>
           </div>
 
           <div className="flex flex-col gap-2 mb-4">
             {proyeccionesByAsesor.map((a) => (
-              <div key={a.asesor} className="flex items-center justify-between rounded-lg px-4 py-2.5" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
-                <span className="text-sm font-medium" style={{ color: "#F2F1EC" }}>{a.asesor}</span>
-                <div className="flex items-center gap-4 text-xs" style={{ color: "#8A8F98" }}>
+              <div key={a.asesor} className="flex items-center justify-between rounded-lg px-4 py-2.5" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
+                <span className="text-sm font-medium" style={{ color: "#0F172A" }}>{a.asesor}</span>
+                <div className="flex items-center gap-4 text-xs" style={{ color: "#64748B" }}>
                   <span>{a.count} {a.count === 1 ? "proyección" : "proyecciones"}</span>
-                  <span className="font-mono font-semibold" style={{ color: "#FFC72C" }}>{money(a.total)}</span>
+                  <span className="font-mono font-semibold" style={{ color: "#0EA5E9" }}>{money(a.total)}</span>
                 </div>
               </div>
             ))}
           </div>
 
           {proyecciones.length === 0 ? (
-            <div className="text-sm text-center py-8 rounded-lg" style={{ color: "#8A8F98", background: "#1E2126", border: "1px dashed #2A2E35" }}>
+            <div className="text-sm text-center py-8 rounded-lg" style={{ color: "#64748B", background: "#FFFFFF", border: "1px dashed #E2E8F0" }}>
               Nadie ha registrado proyecciones todavía.
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-lg" style={{ border: "1px solid #2A2E35" }}>
+            <div className="overflow-x-auto rounded-lg" style={{ border: "1px solid #E2E8F0" }}>
               <table className="w-full text-xs" style={{ minWidth: 680 }}>
                 <thead>
-                  <tr style={{ background: "#1E2126", color: "#8A8F98" }}>
+                  <tr style={{ background: "#FFFFFF", color: "#64748B" }}>
                     {["Asesor", "Cliente", "Identificación", "Modelo", "Forma de pago", "Estado", "Valor", ""].map((h) => (
                       <th key={h} className="text-left font-medium uppercase tracking-wide px-3 py-2.5">{h}</th>
                     ))}
@@ -4801,17 +4736,17 @@ function AdminView({ onExit }) {
                       return (Number(b.valor) || 0) - (Number(a.valor) || 0);
                     })
                     .map((p, i) => (
-                      <tr key={p.id} style={{ background: i % 2 ? "#1a1d22" : "#1E2126", color: "#F2F1EC" }}>
+                      <tr key={p.id} style={{ background: i % 2 ? "#F8FAFC" : "#FFFFFF", color: "#0F172A" }}>
                         <td className="px-3 py-2.5 whitespace-nowrap">{p.asesor}</td>
                         <td className="px-3 py-2.5 whitespace-nowrap">{p.cliente || "—"}</td>
                         <td className="px-3 py-2.5 whitespace-nowrap">{p.identificacion || "—"}</td>
                         <td className="px-3 py-2.5 whitespace-nowrap">{p.modelo || "—"}</td>
                         <td className="px-3 py-2.5 whitespace-nowrap">{p.formaPago}</td>
                         <td className="px-3 py-2.5">{p.estado || "—"}</td>
-                        <td className="px-3 py-2.5 whitespace-nowrap font-mono font-semibold" style={{ color: "#FFC72C" }}>{money((Number(p.valor) || 0) / 1.15)}</td>
+                        <td className="px-3 py-2.5 whitespace-nowrap font-mono font-semibold" style={{ color: "#0EA5E9" }}>{money((Number(p.valor) || 0) / 1.15)}</td>
                         <td className="px-3 py-2.5 text-center">
                           <button onClick={() => handleDeleteProyeccion(p.id)} aria-label="Eliminar">
-                            <Trash2 size={14} color="#8A8F98" />
+                            <Trash2 size={14} color="#64748B" />
                           </button>
                         </td>
                       </tr>
@@ -4827,40 +4762,40 @@ function AdminView({ onExit }) {
         {adminTab === "fuerza" && (
         <>
         <div>
-          <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-1" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
+          <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-1" style={{ color: "#64748B", fontFamily: "'Oswald',sans-serif" }}>
             Producto de fuerza · {periodLabel}
           </div>
-          <div className="text-[11px] mb-3" style={{ color: "#8A8F98" }}>
+          <div className="text-[11px] mb-3" style={{ color: "#64748B" }}>
             Estas ventas no se suman al total vendido ni a las métricas de motocicletas — es un resumen aparte.
           </div>
 
-          <div className="rounded-lg p-4 flex flex-col justify-center gap-1 mb-3" style={{ background: "#1E2126", border: "1px solid #2A2E35", maxWidth: 320 }}>
-            <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#8A8F98" }}>Total producto de fuerza</span>
-            <span className="font-mono font-semibold text-lg" style={{ color: "#F2F1EC" }}>{money(totalFuerzaPeriod)}</span>
-            <span className="text-xs mt-1" style={{ color: "#8A8F98" }}>{fuerzaInPeriod.length} {fuerzaInPeriod.length === 1 ? "venta" : "ventas"}</span>
+          <div className="rounded-lg p-4 flex flex-col justify-center gap-1 mb-3" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", maxWidth: 320 }}>
+            <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#64748B" }}>Total producto de fuerza</span>
+            <span className="font-mono font-semibold text-lg" style={{ color: "#0F172A" }}>{money(totalFuerzaPeriod)}</span>
+            <span className="text-xs mt-1" style={{ color: "#64748B" }}>{fuerzaInPeriod.length} {fuerzaInPeriod.length === 1 ? "venta" : "ventas"}</span>
           </div>
 
           <div className="flex flex-col gap-2 mb-4">
             {fuerzaByAsesor.map((a) => (
-              <div key={a.asesor} className="flex items-center justify-between rounded-lg px-4 py-2.5" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
-                <span className="text-sm font-medium" style={{ color: "#F2F1EC" }}>{a.asesor}</span>
-                <div className="flex items-center gap-4 text-xs" style={{ color: "#8A8F98" }}>
+              <div key={a.asesor} className="flex items-center justify-between rounded-lg px-4 py-2.5" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
+                <span className="text-sm font-medium" style={{ color: "#0F172A" }}>{a.asesor}</span>
+                <div className="flex items-center gap-4 text-xs" style={{ color: "#64748B" }}>
                   <span>{a.count} {a.count === 1 ? "venta" : "ventas"}</span>
-                  <span className="font-mono font-semibold" style={{ color: "#FFC72C" }}>{money(a.total)}</span>
+                  <span className="font-mono font-semibold" style={{ color: "#0EA5E9" }}>{money(a.total)}</span>
                 </div>
               </div>
             ))}
           </div>
 
           {fuerzaInPeriod.length === 0 ? (
-            <div className="text-sm text-center py-8 rounded-lg" style={{ color: "#8A8F98", background: "#1E2126", border: "1px dashed #2A2E35" }}>
+            <div className="text-sm text-center py-8 rounded-lg" style={{ color: "#64748B", background: "#FFFFFF", border: "1px dashed #E2E8F0" }}>
               No hay ventas de producto de fuerza en este periodo.
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-lg" style={{ border: "1px solid #2A2E35" }}>
+            <div className="overflow-x-auto rounded-lg" style={{ border: "1px solid #E2E8F0" }}>
               <table className="w-full text-xs" style={{ minWidth: 760 }}>
                 <thead>
-                  <tr style={{ background: "#1E2126", color: "#8A8F98" }}>
+                  <tr style={{ background: "#FFFFFF", color: "#64748B" }}>
                     {["Asesor", "Factura", "Fecha", "Cliente", "Modelo", "Pago", "Origen", "Valor", "Observaciones"].map((h) => (
                       <th key={h} className="text-left font-medium uppercase tracking-wide px-3 py-2.5">{h}</th>
                     ))}
@@ -4870,7 +4805,7 @@ function AdminView({ onExit }) {
                   {[...fuerzaInPeriod]
                     .sort((a, b) => (a.fecha < b.fecha ? 1 : -1))
                     .map((s, i) => (
-                      <tr key={s.id} style={{ background: i % 2 ? "#1a1d22" : "#1E2126", color: "#F2F1EC" }}>
+                      <tr key={s.id} style={{ background: i % 2 ? "#F8FAFC" : "#FFFFFF", color: "#0F172A" }}>
                         <td className="px-3 py-2.5 whitespace-nowrap">{s.asesor}</td>
                         <td className="px-3 py-2.5 whitespace-nowrap">{s.factura}</td>
                         <td className="px-3 py-2.5 whitespace-nowrap">{s.fecha}</td>
@@ -4878,8 +4813,8 @@ function AdminView({ onExit }) {
                         <td className="px-3 py-2.5 whitespace-nowrap">{s.modelo}</td>
                         <td className="px-3 py-2.5 whitespace-nowrap">{s.formaPago}</td>
                         <td className="px-3 py-2.5 whitespace-nowrap">{s.origen}</td>
-                        <td className="px-3 py-2.5 whitespace-nowrap font-mono font-semibold" style={{ color: "#FFC72C" }}>{money(s.valor)}</td>
-                        <td className="px-3 py-2.5" style={{ color: "#8A8F98", maxWidth: 220 }}>{s.observaciones || "—"}</td>
+                        <td className="px-3 py-2.5 whitespace-nowrap font-mono font-semibold" style={{ color: "#0EA5E9" }}>{money(s.valor)}</td>
+                        <td className="px-3 py-2.5" style={{ color: "#64748B", maxWidth: 220 }}>{s.observaciones || "—"}</td>
                       </tr>
                     ))}
                 </tbody>
@@ -4896,29 +4831,29 @@ function AdminView({ onExit }) {
 
         {adminTab === "crm" && (
         <div>
-          <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-1" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
+          <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-1" style={{ color: "#64748B", fontFamily: "'Oswald',sans-serif" }}>
             CRM · Prospectos de todo el equipo
           </div>
-          <div className="text-[11px] mb-3" style={{ color: "#8A8F98" }}>
+          <div className="text-[11px] mb-3" style={{ color: "#64748B" }}>
             Vista de solo lectura — cada asesor gestiona sus propios prospectos.
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-            <div className="rounded-lg p-4 flex flex-col justify-center gap-1" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
-              <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#8A8F98" }}>Total prospectos</span>
-              <span className="font-mono font-semibold text-lg" style={{ color: "#F2F1EC" }}>{crm.length}</span>
+            <div className="rounded-lg p-4 flex flex-col justify-center gap-1" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
+              <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#64748B" }}>Total prospectos</span>
+              <span className="font-mono font-semibold text-lg" style={{ color: "#0F172A" }}>{crm.length}</span>
             </div>
-            <div className="rounded-lg p-4 flex flex-col justify-center gap-1" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
-              <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#8A8F98" }}>Temperatura alta</span>
-              <span className="font-mono font-semibold text-lg" style={{ color: "#E4002B" }}>{crmPorTemperatura.ALTA}</span>
+            <div className="rounded-lg p-4 flex flex-col justify-center gap-1" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
+              <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#64748B" }}>Temperatura alta</span>
+              <span className="font-mono font-semibold text-lg" style={{ color: "#2563EB" }}>{crmPorTemperatura.ALTA}</span>
             </div>
-            <div className="rounded-lg p-4 flex flex-col justify-center gap-1" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
-              <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#8A8F98" }}>Temperatura media</span>
-              <span className="font-mono font-semibold text-lg" style={{ color: "#FFC72C" }}>{crmPorTemperatura.MEDIA}</span>
+            <div className="rounded-lg p-4 flex flex-col justify-center gap-1" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
+              <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#64748B" }}>Temperatura media</span>
+              <span className="font-mono font-semibold text-lg" style={{ color: "#0EA5E9" }}>{crmPorTemperatura.MEDIA}</span>
             </div>
-            <div className="rounded-lg p-4 flex flex-col justify-center gap-1" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
-              <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#8A8F98" }}>Gestiones vencidas</span>
-              <span className="font-mono font-semibold text-lg" style={{ color: crmVencidas > 0 ? "#FF8A8A" : "#F2F1EC" }}>{crmVencidas}</span>
+            <div className="rounded-lg p-4 flex flex-col justify-center gap-1" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
+              <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#64748B" }}>Gestiones vencidas</span>
+              <span className="font-mono font-semibold text-lg" style={{ color: crmVencidas > 0 ? "#DC2626" : "#0F172A" }}>{crmVencidas}</span>
             </div>
           </div>
 
@@ -4946,7 +4881,7 @@ function AdminView({ onExit }) {
           )}
 
           {crmFiltrado.length === 0 ? (
-            <div className="text-sm text-center py-8 rounded-lg" style={{ color: "#8A8F98", background: "#1E2126", border: "1px dashed #2A2E35" }}>
+            <div className="text-sm text-center py-8 rounded-lg" style={{ color: "#64748B", background: "#FFFFFF", border: "1px dashed #E2E8F0" }}>
               {crm.length === 0 ? "Nadie ha registrado prospectos todavía." : "Ningún prospecto coincide con este filtro."}
             </div>
           ) : (
@@ -4956,7 +4891,7 @@ function AdminView({ onExit }) {
                 const vencida = p.proximaGestion && p.proximaGestion <= todayISO();
                 const expanded = crmExpandedId === p.id;
                 return (
-                  <div key={p.id} className="rounded-lg overflow-hidden" style={{ background: "#1E2126", border: `1px solid ${vencida ? "#E4002B" : "#2A2E35"}` }}>
+                  <div key={p.id} className="rounded-lg overflow-hidden" style={{ background: "#FFFFFF", border: `1px solid ${vencida ? "#DC2626" : "#E2E8F0"}` }}>
                     <button
                       type="button"
                       onClick={() => setCrmExpandedId(expanded ? null : p.id)}
@@ -4964,43 +4899,43 @@ function AdminView({ onExit }) {
                     >
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-medium" style={{ color: "#F2F1EC" }}>{p.nombre}</span>
+                          <span className="text-sm font-medium" style={{ color: "#0F172A" }}>{p.nombre}</span>
                           <span
                             className="text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0 font-semibold"
-                            style={{ background: temp.color, color: "#14161A" }}
+                            style={{ background: temp.color, color: "#F4F7FB" }}
                           >
                             {p.temperatura}
                           </span>
-                          <span className="text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0" style={{ background: "#14161A", color: "#8A8F98", border: "1px solid #2A2E35" }}>
+                          <span className="text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0" style={{ background: "#F4F7FB", color: "#64748B", border: "1px solid #E2E8F0" }}>
                             {p.asesor}
                           </span>
                         </div>
-                        <div className="text-[11px] mt-0.5" style={{ color: "#8A8F98" }}>
+                        <div className="text-[11px] mt-0.5" style={{ color: "#64748B" }}>
                           {p.telefono}{p.identificacion ? ` · ${p.identificacion}` : ""} · {p.modeloInteres || "Sin modelo"} · {p.metodoPago}
                         </div>
                         {p.proximaGestion && (
-                          <div className="text-[11px] mt-0.5 font-medium" style={{ color: vencida ? "#FF8A8A" : "#8A8F98" }}>
+                          <div className="text-[11px] mt-0.5 font-medium" style={{ color: vencida ? "#DC2626" : "#64748B" }}>
                             {vencida ? "Gestión pendiente · " : "Próxima gestión: "}
                             {p.proximaGestion}
                           </div>
                         )}
                       </div>
-                      <span className="text-xs shrink-0" style={{ color: "#8A8F98" }}>{expanded ? "▲" : "▼"}</span>
+                      <span className="text-xs shrink-0" style={{ color: "#64748B" }}>{expanded ? "▲" : "▼"}</span>
                     </button>
 
                     {expanded && (
-                      <div className="px-4 py-3" style={{ background: "#181a1f", borderTop: "1px solid #2A2E35" }}>
-                        <div className="text-[11px] uppercase tracking-[0.1em] font-medium mb-2" style={{ color: "#8A8F98" }}>
+                      <div className="px-4 py-3" style={{ background: "#F1F5F9", borderTop: "1px solid #E2E8F0" }}>
+                        <div className="text-[11px] uppercase tracking-[0.1em] font-medium mb-2" style={{ color: "#64748B" }}>
                           Historial de gestión
                         </div>
                         {(p.gestiones || []).length === 0 ? (
-                          <div className="text-xs" style={{ color: "#8A8F98" }}>Sin comentarios todavía.</div>
+                          <div className="text-xs" style={{ color: "#64748B" }}>Sin comentarios todavía.</div>
                         ) : (
                           <div className="flex flex-col gap-2">
                             {[...p.gestiones].reverse().map((g) => (
-                              <div key={g.id} className="rounded-md px-3 py-2" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
-                                <div className="text-xs" style={{ color: "#F2F1EC" }}>{g.texto}</div>
-                                <div className="text-[10px] mt-1" style={{ color: "#8A8F98" }}>{formatDateTime(g.fecha)}</div>
+                              <div key={g.id} className="rounded-md px-3 py-2" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
+                                <div className="text-xs" style={{ color: "#0F172A" }}>{g.texto}</div>
+                                <div className="text-[10px] mt-1" style={{ color: "#64748B" }}>{formatDateTime(g.fecha)}</div>
                               </div>
                             ))}
                           </div>
@@ -5019,10 +4954,10 @@ function AdminView({ onExit }) {
         <div>
           <div className="flex items-center justify-between mb-4 no-print">
             <div>
-              <div className="font-semibold uppercase text-xs tracking-[0.12em]" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
+              <div className="font-semibold uppercase text-xs tracking-[0.12em]" style={{ color: "#64748B", fontFamily: "'Oswald',sans-serif" }}>
                 Reunión de avance con asesores
               </div>
-              <div className="text-[11px] mt-1" style={{ color: "#8A8F98" }}>
+              <div className="text-[11px] mt-1" style={{ color: "#64748B" }}>
                 Reporte listo para imprimir o guardar como PDF y usar en la reunión.
               </div>
             </div>
@@ -5030,20 +4965,20 @@ function AdminView({ onExit }) {
               type="button"
               onClick={() => window.print()}
               className="flex items-center gap-2 rounded-md px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.08em] shrink-0"
-              style={{ background: "#E4002B", color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}
+              style={{ background: "#2563EB", color: "#0F172A", fontFamily: "'Oswald',sans-serif" }}
             >
               <Download size={14} />
               Imprimir / Guardar PDF
             </button>
           </div>
 
-          <div id="printable-reunion" className="rounded-lg p-6 sm:p-8" style={{ background: "#F2F1EC", color: "#14161A" }}>
-            <div className="flex items-center justify-between mb-6 pb-4" style={{ borderBottom: "3px solid #E4002B" }}>
+          <div id="printable-reunion" className="rounded-lg p-6 sm:p-8" style={{ background: "#FFFFFF", color: "#0F172A" }}>
+            <div className="flex items-center justify-between mb-6 pb-4" style={{ borderBottom: "3px solid #2563EB" }}>
               <div>
-                <div className="font-bold uppercase text-xl" style={{ fontFamily: "'Oswald',sans-serif", color: "#14161A" }}>
+                <div className="font-bold uppercase text-xl" style={{ fontFamily: "'Oswald',sans-serif", color: "#0F172A" }}>
                   Reunión de avance — {periodLabel}
                 </div>
-                <div className="text-xs mt-1" style={{ color: "#545862" }}>
+                <div className="text-xs mt-1" style={{ color: "#64748B" }}>
                   Honda Santo Domingo · Generado el {new Date().toLocaleDateString("es-EC", { day: "2-digit", month: "long", year: "numeric" })}
                 </div>
               </div>
@@ -5051,35 +4986,35 @@ function AdminView({ onExit }) {
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
-              <div className="rounded-lg p-3" style={{ background: "#FFFFFF", border: "1px solid #DEDCD3" }}>
-                <div className="text-[10px] uppercase tracking-wide" style={{ color: "#545862" }}>Total vendido</div>
-                <div className="font-mono font-bold text-lg" style={{ color: "#14161A" }}>{money(dollarsSold)}</div>
+              <div className="rounded-lg p-3" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
+                <div className="text-[10px] uppercase tracking-wide" style={{ color: "#64748B" }}>Total vendido</div>
+                <div className="font-mono font-bold text-lg" style={{ color: "#0F172A" }}>{money(dollarsSold)}</div>
               </div>
-              <div className="rounded-lg p-3" style={{ background: "#FFFFFF", border: "1px solid #DEDCD3" }}>
-                <div className="text-[10px] uppercase tracking-wide" style={{ color: "#545862" }}>Meta del mes</div>
-                <div className="font-mono font-bold text-lg" style={{ color: "#14161A" }}>{money(budgetDollars)}</div>
+              <div className="rounded-lg p-3" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
+                <div className="text-[10px] uppercase tracking-wide" style={{ color: "#64748B" }}>Meta del mes</div>
+                <div className="font-mono font-bold text-lg" style={{ color: "#0F172A" }}>{money(budgetDollars)}</div>
               </div>
-              <div className="rounded-lg p-3" style={{ background: "#FFFFFF", border: "1px solid #DEDCD3" }}>
-                <div className="text-[10px] uppercase tracking-wide" style={{ color: "#545862" }}>% cumplido</div>
-                <div className="font-mono font-bold text-lg" style={{ color: pctDollars >= 100 ? "#2E7D32" : "#E4002B" }}>{budgetDollars > 0 ? `${Math.round(pctDollars)}%` : "—"}</div>
+              <div className="rounded-lg p-3" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
+                <div className="text-[10px] uppercase tracking-wide" style={{ color: "#64748B" }}>% cumplido</div>
+                <div className="font-mono font-bold text-lg" style={{ color: pctDollars >= 100 ? "#16A34A" : "#2563EB" }}>{budgetDollars > 0 ? `${Math.round(pctDollars)}%` : "—"}</div>
               </div>
-              <div className="rounded-lg p-3" style={{ background: "#FFFFFF", border: "1px solid #DEDCD3" }}>
-                <div className="text-[10px] uppercase tracking-wide" style={{ color: "#545862" }}>Deberían ir en</div>
-                <div className="font-mono font-bold text-lg" style={{ color: "#14161A" }}>{budgetDollars > 0 ? `${Math.round(monthProgressPct())}%` : "—"}</div>
-                <div className="text-[10px]" style={{ color: "#545862" }}>{budgetDollars > 0 ? money(budgetDollars * (monthProgressPct() / 100)) : ""}</div>
+              <div className="rounded-lg p-3" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
+                <div className="text-[10px] uppercase tracking-wide" style={{ color: "#64748B" }}>Deberían ir en</div>
+                <div className="font-mono font-bold text-lg" style={{ color: "#0F172A" }}>{budgetDollars > 0 ? `${Math.round(monthProgressPct())}%` : "—"}</div>
+                <div className="text-[10px]" style={{ color: "#64748B" }}>{budgetDollars > 0 ? money(budgetDollars * (monthProgressPct() / 100)) : ""}</div>
               </div>
-              <div className="rounded-lg p-3" style={{ background: "#FFFFFF", border: "1px solid #DEDCD3" }}>
-                <div className="text-[10px] uppercase tracking-wide" style={{ color: "#545862" }}>Días restantes</div>
-                <div className="font-mono font-bold text-lg" style={{ color: "#14161A" }}>{daysLeftInMonth()}</div>
+              <div className="rounded-lg p-3" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
+                <div className="text-[10px] uppercase tracking-wide" style={{ color: "#64748B" }}>Días restantes</div>
+                <div className="font-mono font-bold text-lg" style={{ color: "#0F172A" }}>{daysLeftInMonth()}</div>
               </div>
             </div>
 
-            <div className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: "#E4002B" }}>Desempeño por asesor</div>
+            <div className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: "#2563EB" }}>Desempeño por asesor</div>
             <table className="w-full text-xs mb-6" style={{ borderCollapse: "collapse" }}>
               <thead>
-                <tr style={{ background: "#14161A" }}>
+                <tr style={{ background: "#F1F5F9" }}>
                   {["Asesor", "Ventas", "Total", "Ticket prom.", "% meta", "Debería ir en", "Falta $", "Falta motos", "Cotizados", "Tasa cierre"].map((h) => (
-                    <th key={h} className="text-left px-2 py-2" style={{ color: "#F2F1EC" }}>{h}</th>
+                    <th key={h} className="text-left px-2 py-2" style={{ color: "#0F172A" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -5096,16 +5031,16 @@ function AdminView({ onExit }) {
                       <td className="px-2 py-2">{ranked ? ranked.count : 0}</td>
                       <td className="px-2 py-2 font-mono">{money(ranked ? ranked.total : 0)}</td>
                       <td className="px-2 py-2 font-mono">{money(ranked ? ranked.ticket : 0)}</td>
-                      <td className="px-2 py-2 font-mono font-semibold" style={{ color: presu && presu.pctDolares >= 100 ? "#2E7D32" : "#E4002B" }}>
+                      <td className="px-2 py-2 font-mono font-semibold" style={{ color: presu && presu.pctDolares >= 100 ? "#16A34A" : "#2563EB" }}>
                         {presu && presu.metaDolares > 0 ? `${Math.round(presu.pctDolares)}%` : "—"}
                       </td>
-                      <td className="px-2 py-2 font-mono" style={{ color: "#545862" }}>
+                      <td className="px-2 py-2 font-mono" style={{ color: "#64748B" }}>
                         {presu && presu.metaDolares > 0 ? `${Math.round(monthProgressPct())}% (${money(presu.metaDolares * (monthProgressPct() / 100))})` : "—"}
                       </td>
-                      <td className="px-2 py-2 font-mono font-semibold" style={{ color: faltaDolares > 0 ? "#E4002B" : "#2E7D32" }}>
+                      <td className="px-2 py-2 font-mono font-semibold" style={{ color: faltaDolares > 0 ? "#2563EB" : "#16A34A" }}>
                         {presu && presu.metaDolares > 0 ? (faltaDolares > 0 ? money(faltaDolares) : "Cumplido") : "—"}
                       </td>
-                      <td className="px-2 py-2 font-mono font-semibold" style={{ color: faltaMotos > 0 ? "#E4002B" : "#2E7D32" }}>
+                      <td className="px-2 py-2 font-mono font-semibold" style={{ color: faltaMotos > 0 ? "#2563EB" : "#16A34A" }}>
                         {presu && presu.metaUnidades > 0 ? (faltaMotos > 0 ? faltaMotos : "Cumplido") : "—"}
                       </td>
                       <td className="px-2 py-2">{perf ? perf.cotizaciones : 0}</td>
@@ -5117,24 +5052,24 @@ function AdminView({ onExit }) {
             </table>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-              <div className="rounded-lg p-3" style={{ background: "#FFFFFF", border: "1px solid #DEDCD3" }}>
-                <div className="text-[10px] uppercase tracking-wide" style={{ color: "#545862" }}>Moto más vendida</div>
+              <div className="rounded-lg p-3" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
+                <div className="text-[10px] uppercase tracking-wide" style={{ color: "#64748B" }}>Moto más vendida</div>
                 <div className="font-bold text-sm mt-1">{byModelo[0] ? byModelo[0].modelo : "—"}</div>
-                <div className="text-[11px]" style={{ color: "#545862" }}>{byModelo[0] ? `${byModelo[0].count} unidades` : ""}</div>
+                <div className="text-[11px]" style={{ color: "#64748B" }}>{byModelo[0] ? `${byModelo[0].count} unidades` : ""}</div>
               </div>
-              <div className="rounded-lg p-3" style={{ background: "#FFFFFF", border: "1px solid #DEDCD3" }}>
-                <div className="text-[10px] uppercase tracking-wide" style={{ color: "#545862" }}>Canal más fuerte</div>
+              <div className="rounded-lg p-3" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
+                <div className="text-[10px] uppercase tracking-wide" style={{ color: "#64748B" }}>Canal más fuerte</div>
                 <div className="font-bold text-sm mt-1">{byCanalVentas[0] ? byCanalVentas[0].origen : "—"}</div>
-                <div className="text-[11px]" style={{ color: "#545862" }}>{byCanalVentas[0] ? `${byCanalVentas[0].count} ventas` : ""}</div>
+                <div className="text-[11px]" style={{ color: "#64748B" }}>{byCanalVentas[0] ? `${byCanalVentas[0].count} ventas` : ""}</div>
               </div>
-              <div className="rounded-lg p-3" style={{ background: "#FFFFFF", border: "1px solid #DEDCD3" }}>
-                <div className="text-[10px] uppercase tracking-wide" style={{ color: "#545862" }}>Forma de pago más usada</div>
+              <div className="rounded-lg p-3" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0" }}>
+                <div className="text-[10px] uppercase tracking-wide" style={{ color: "#64748B" }}>Forma de pago más usada</div>
                 <div className="font-bold text-sm mt-1">{byFormaPago[0] ? byFormaPago[0].formaPago : "—"}</div>
-                <div className="text-[11px]" style={{ color: "#545862" }}>{byFormaPago[0] ? `${byFormaPago[0].count} ventas` : ""}</div>
+                <div className="text-[11px]" style={{ color: "#64748B" }}>{byFormaPago[0] ? `${byFormaPago[0].count} ventas` : ""}</div>
               </div>
             </div>
 
-            <div className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: "#E4002B" }}>
+            <div className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: "#2563EB" }}>
               Recomendaciones para cumplir el presupuesto
             </div>
             <div className="flex flex-col gap-2 mb-6">
@@ -5144,8 +5079,8 @@ function AdminView({ onExit }) {
                   className="rounded-md px-3 py-2.5 text-xs"
                   style={{
                     background: r.tipo === "alerta" ? "#FDECEC" : r.tipo === "positivo" ? "#E9F5EA" : r.tipo === "individual" ? "#FFF4DD" : "#EFEEE9",
-                    border: `1px solid ${r.tipo === "alerta" ? "#E4002B" : r.tipo === "positivo" ? "#2E7D32" : r.tipo === "individual" ? "#C98A00" : "#DEDCD3"}`,
-                    color: "#14161A",
+                    border: `1px solid ${r.tipo === "alerta" ? "#2563EB" : r.tipo === "positivo" ? "#16A34A" : r.tipo === "individual" ? "#C98A00" : "#E2E8F0"}`,
+                    color: "#0F172A",
                   }}
                 >
                   {r.texto}
@@ -5153,12 +5088,14 @@ function AdminView({ onExit }) {
               ))}
             </div>
 
-            <div className="text-[10px] pt-3" style={{ color: "#8A8F98", borderTop: "1px solid #DEDCD3" }}>
+            <div className="text-[10px] pt-3" style={{ color: "#64748B", borderTop: "1px solid #E2E8F0" }}>
               Documento generado automáticamente desde Compass — Honda Santo Domingo. Preparado por Alejandro A., Jefe de Tienda.
             </div>
           </div>
         </div>
         )}
+      </div>
+        </main>
       </div>
     </div>
   );
@@ -5174,7 +5111,7 @@ export default function App() {
         @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=Roboto+Mono:wght@500;600&display=swap');
         input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.7); }
         select { -webkit-appearance: none; appearance: none; }
-        ::selection { background: #E4002B; color: #fff; }
+        ::selection { background: #2563EB; color: #fff; }
         @media print {
           body * { visibility: hidden; }
           #printable-reunion, #printable-reunion * { visibility: visible; }
