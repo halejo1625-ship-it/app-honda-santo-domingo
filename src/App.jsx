@@ -594,6 +594,7 @@ async function appendEgreso(item) {
 
 
 
+
 // ---------- odometer ----------
 function Odometer({ value, digits = 6 }) {
   const str = Math.round(Math.max(0, value)).toString().padStart(digits, "0").slice(-digits);
@@ -4066,15 +4067,19 @@ function AdminView({ onExit }) {
   // Numera igual que en la vista del asesor: por asesor y por mes, reiniciando
   // en 1 cada mes — así el número que ve el administrador coincide exactamente
   // con el que ve cada asesor para su propia venta.
+  // Numeración GENERAL para el administrador: cuenta todas las ventas de todo
+  // el equipo juntas, mes a mes (para saber cuántas motos van en total). Es
+  // independiente de la numeración que ve cada asesor en su propia pantalla,
+  // que empieza en 1 solo para sus propias ventas.
   const salesNumberById = useMemo(() => {
-    const porGrupo = {};
+    const porMes = {};
     sales.forEach((s) => {
-      const key = `${normalizeKey(s.asesor)}|${s.fecha.slice(0, 7)}`;
-      if (!porGrupo[key]) porGrupo[key] = [];
-      porGrupo[key].push(s);
+      const mes = s.fecha.slice(0, 7);
+      if (!porMes[mes]) porMes[mes] = [];
+      porMes[mes].push(s);
     });
     const map = {};
-    Object.values(porGrupo).forEach((lista) => {
+    Object.values(porMes).forEach((lista) => {
       const ordenAsc = [...lista].sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : a.id < b.id ? -1 : 1));
       ordenAsc.forEach((s, i) => {
         map[s.id] = i + 1;
