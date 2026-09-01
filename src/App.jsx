@@ -389,6 +389,7 @@ async function appendEgreso(item) {
 
 
 
+
 // ---------- odometer ----------
 function Odometer({ value, digits = 6 }) {
   const str = Math.round(Math.max(0, value)).toString().padStart(digits, "0").slice(-digits);
@@ -1408,11 +1409,11 @@ function AsesorView({ onExit }) {
     const norm = name.trim().toLowerCase();
     return sales
       .filter((s) => s.asesor.trim().toLowerCase() === norm)
-      .sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : a.id < b.id ? -1 : 1));
+      .sort((a, b) => (a.fecha > b.fecha ? -1 : a.fecha < b.fecha ? 1 : a.id > b.id ? -1 : 1));
   }, [sales, name]);
 
-  // Numera las ventas según el orden mostrado (por fecha de facturación) —
-  // la #1 es la factura más antigua, y así sucesivamente.
+  // Numera las ventas según el orden mostrado (por fecha de facturación,
+  // de más reciente a más antigua) — la #1 es la factura más reciente.
   const mySalesNumberById = useMemo(() => {
     const map = {};
     mySales.forEach((s, i) => {
@@ -3465,12 +3466,13 @@ function AdminView({ onExit }) {
     return [...list].sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
   }, [salesInPeriod, filterAsesor]);
 
-  // Numera TODAS las ventas por orden de registro (no cambia según el filtro de
-  // periodo/asesor, así el número de una venta siempre es el mismo).
+  // Numera TODAS las ventas por fecha de facturación (de más reciente a más
+  // antigua) — no cambia según el filtro de periodo/asesor, así el número de
+  // una venta siempre es el mismo sin importar qué esté viendo el administrador.
   const salesNumberById = useMemo(() => {
-    const byCreation = [...sales].sort((a, b) => (a.id < b.id ? -1 : 1));
+    const byFecha = [...sales].sort((a, b) => (a.fecha > b.fecha ? -1 : a.fecha < b.fecha ? 1 : a.id > b.id ? -1 : 1));
     const map = {};
-    byCreation.forEach((s, i) => {
+    byFecha.forEach((s, i) => {
       map[s.id] = i + 1;
     });
     return map;
