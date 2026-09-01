@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Plus, Trash2, LogOut, Lock, Download, ChevronRight, ChevronLeft, Loader2, Upload, FileSpreadsheet, MessageCircle, Send, X, RefreshCw, LayoutGrid, Wallet, TrendingUp, Zap, Bell, Users, FileText, BarChart3 } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine, ComposedChart, Line, Legend } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine, ComposedChart, Line, LineChart, Legend, Area } from "recharts";
 import * as XLSX from "xlsx";
 import { loadDoc, saveDoc, subscribeChat, sendChatMessage, appendToArray } from "./firebase";
 
@@ -395,6 +395,7 @@ async function appendEgreso(item) {
   const ok = await appendToArray("caja-egresos", item);
   return ok ? await loadEgresos() : null;
 }
+
 
 
 
@@ -3082,6 +3083,10 @@ function AdminView({ onExit }) {
   const [statsMesFin, setStatsMesFin] = useState(monthKey);
   const [statsBudgets, setStatsBudgets] = useState({});
   const [statsFiltroAsesor, setStatsFiltroAsesor] = useState("Todos");
+  const [avanceMesInicio, setAvanceMesInicio] = useState(monthKey);
+  const [avanceMesFin, setAvanceMesFin] = useState(monthKey);
+  const [avanceFiltroAsesor, setAvanceFiltroAsesor] = useState("Todos");
+  const [avanceBudgets, setAvanceBudgets] = useState({});
   const [cajaDayFilter, setCajaDayFilter] = useState("todos");
   const [rangeFrom, setRangeFrom] = useState(todayISO());
   const [rangeTo, setRangeTo] = useState(todayISO());
@@ -3360,6 +3365,77 @@ function AdminView({ onExit }) {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [motoSales, statsMonthsList.join(",")]);
+
+  // ---------- Avance acumulado del presupuesto (día a día, en dólares) ----------
+  const avanceMonthsList = useMemo(
+    () => monthsBetween(avanceMesInicio, avanceMesFin),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [avanceMesInicio, avanceMesFin]
+  );
+
+  useEffect(() => {
+    let cancelado = false;
+    (async () => {
+      const entries = await Promise.all(avanceMonthsList.map(async (m) => [m, await loadBudget(m)]));
+      if (!cancelado) {
+        const map = {};
+        entries.forEach(([m, b]) => {
+          map[m] = b;
+        });
+        setAvanceBudgets(map);
+      }
+    })();
+    return () => {
+      cancelado = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [avanceMonthsList.join(",")]);
+
+  const avanceChartData = useMemo(() => {
+    if (avanceMonthsList.length === 0) return { data: [], metaTotal: 0, vendidoTotal: 0 };
+
+    const [ySt, mSt] = avanceMonthsList[0].split("-").map(Number);
+    const [yEn, mEn] = avanceMonthsList[avanceMonthsList.length - 1].split("-").map(Number);
+    const fechaInicio = new Date(ySt, mSt - 1, 1);
+    const fechaFin = new Date(yEn, mEn, 0); // último día del mes final
+
+    const dias = [];
+    for (let d = new Date(fechaInicio); d <= fechaFin; d.setDate(d.getDate() + 1)) {
+      dias.push(d.toISOString().slice(0, 10));
+    }
+
+    // Presupuesto combinado: suma el presupuesto de todos los meses incluidos
+    // (si son varios meses, se suman entre sí — "los 2 presupuestos o los que sea").
+    const numAsesores = avanceFiltroAsesor === "Todos" ? 1 : ASESORES.length || 1;
+    const metaTotal =
+      avanceMonthsList.reduce((sum, m) => sum + ((avanceBudgets[m] && avanceBudgets[m].dollars) || 0), 0) / numAsesores;
+    const metaDiaria = dias.length > 0 ? metaTotal / dias.length : 0;
+
+    const ventasFiltradas = motoSales.filter((s) => {
+      const enRango = s.fecha >= dias[0] && s.fecha <= dias[dias.length - 1];
+      const esDelAsesor = avanceFiltroAsesor === "Todos" || s.asesor.trim() === avanceFiltroAsesor;
+      return enRango && esDelAsesor;
+    });
+    const porFecha = {};
+    ventasFiltradas.forEach((s) => {
+      porFecha[s.fecha] = (porFecha[s.fecha] || 0) + s.valor / 1.15;
+    });
+
+    let acumuladoReal = 0;
+    let acumuladoMeta = 0;
+    const data = dias.map((fecha, i) => {
+      acumuladoReal += porFecha[fecha] || 0;
+      acumuladoMeta += metaDiaria;
+      return {
+        fecha,
+        fechaCorta: fecha.slice(5).replace("-", "/"),
+        real: Math.round(acumuladoReal * 100) / 100,
+        meta: Math.round(acumuladoMeta * 100) / 100,
+      };
+    });
+
+    return { data, metaTotal, vendidoTotal: acumuladoReal };
+  }, [motoSales, avanceMonthsList.join(","), avanceBudgets, avanceFiltroAsesor]);
 
   const salesInPeriod = useMemo(() => {
     if (periodSelection === "todo") return motoSales;
@@ -5125,6 +5201,93 @@ function AdminView({ onExit }) {
                   )}
                 </div>
               ))}
+            </div>
+          </div>
+
+          <div className="mt-6">
+            <div className="text-[11px] uppercase tracking-[0.12em] font-medium mb-1" style={{ color: "#8A8F98" }}>
+              Avance acumulado del presupuesto
+            </div>
+            <div className="text-[11px] mb-3" style={{ color: "#8A8F98" }}>
+              Compara lo vendido acumulado día a día contra cuánto deberías llevar según el presupuesto. Si eliges varios meses, sus presupuestos se suman en una sola meta.
+            </div>
+
+            <div className="rounded-lg p-4 sm:p-5 mb-4" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <Field label="Desde">
+                  <select value={avanceMesInicio} onChange={(e) => setAvanceMesInicio(e.target.value)} className="rounded-md px-3 py-2.5 text-sm outline-none" style={inputStyle}>
+                    {availableMonthsAsc.map((m) => (
+                      <option key={m} value={m}>{monthLabel(m)}</option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Hasta">
+                  <select value={avanceMesFin} onChange={(e) => setAvanceMesFin(e.target.value)} className="rounded-md px-3 py-2.5 text-sm outline-none" style={inputStyle}>
+                    {availableMonthsAsc.map((m) => (
+                      <option key={m} value={m}>{monthLabel(m)}</option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Asesor">
+                  <select value={avanceFiltroAsesor} onChange={(e) => setAvanceFiltroAsesor(e.target.value)} className="rounded-md px-3 py-2.5 text-sm outline-none" style={inputStyle}>
+                    <option value="Todos">Toda la tienda</option>
+                    {ASESORES.map((a) => (
+                      <option key={a.nombre} value={a.nombre}>{a.nombre}</option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+              <div className="rounded-lg p-4 flex flex-col justify-center gap-1" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+                <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#8A8F98" }}>Meta combinada</span>
+                <span className="font-mono font-semibold text-xl" style={{ color: "#F2F1EC" }}>{avanceChartData.metaTotal > 0 ? money(avanceChartData.metaTotal) : "—"}</span>
+              </div>
+              <div className="rounded-lg p-4 flex flex-col justify-center gap-1" style={{ background: "#1E2126", border: "1px solid #E4002B" }}>
+                <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#8A8F98" }}>Vendido acumulado</span>
+                <span className="font-mono font-semibold text-xl" style={{ color: "#FFC72C" }}>{money(avanceChartData.vendidoTotal)}</span>
+              </div>
+              <div className="rounded-lg p-4 flex flex-col justify-center gap-1" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+                <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#8A8F98" }}>Diferencia</span>
+                <span className="font-mono font-semibold text-xl" style={{ color: avanceChartData.vendidoTotal >= avanceChartData.metaTotal ? "#2E7D32" : "#E4002B" }}>
+                  {avanceChartData.metaTotal > 0 ? money(avanceChartData.vendidoTotal - avanceChartData.metaTotal) : "—"}
+                </span>
+              </div>
+            </div>
+
+            <div className="rounded-lg p-4" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+              <div className="flex items-center gap-4 mb-2 text-[11px]" style={{ color: "#8A8F98" }}>
+                <span className="flex items-center gap-1.5"><span style={{ width: 10, height: 2, background: "#FFC72C", display: "inline-block" }} /> Vendido acumulado ($)</span>
+                <span className="flex items-center gap-1.5"><span style={{ width: 10, height: 2, background: "#8A8F98", display: "inline-block", borderTop: "2px dashed #8A8F98" }} /> Debería ir en ($)</span>
+              </div>
+              <ResponsiveContainer width="100%" height={320}>
+                <ComposedChart data={avanceChartData.data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <CartesianGrid stroke="#2A2E35" />
+                  <XAxis
+                    dataKey="fechaCorta"
+                    tick={{ fill: "#8A8F98", fontSize: 10 }}
+                    axisLine={{ stroke: "#2A2E35" }}
+                    tickLine={false}
+                    minTickGap={24}
+                  />
+                  <YAxis
+                    tick={{ fill: "#8A8F98", fontSize: 10 }}
+                    axisLine={{ stroke: "#2A2E35" }}
+                    tickLine={false}
+                    tickFormatter={(v) => `$${v >= 1000 ? `${Math.round(v / 1000)}k` : v}`}
+                  />
+                  <Tooltip
+                    formatter={(v, name) => [money(v), name === "real" ? "Vendido acumulado" : "Debería ir en"]}
+                    labelFormatter={(f) => `Fecha: ${f}`}
+                    contentStyle={{ background: "#1E2126", border: "1px solid #2A2E35", borderRadius: 6, color: "#F2F1EC" }}
+                    labelStyle={{ color: "#F2F1EC" }}
+                  />
+                  {/* Línea de fondo: cuánto se debería llevar acumulado según el presupuesto */}
+                  <Area type="monotone" dataKey="meta" stroke="#8A8F98" strokeDasharray="4 4" fill="#8A8F98" fillOpacity={0.06} strokeWidth={1.5} />
+                  <Line type="monotone" dataKey="real" stroke="#FFC72C" strokeWidth={2.5} dot={false} />
+                </ComposedChart>
+              </ResponsiveContainer>
             </div>
           </div>
         </div>
