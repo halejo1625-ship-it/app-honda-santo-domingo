@@ -588,6 +588,7 @@ async function appendEgreso(item) {
 
 
 
+
 // ---------- odometer ----------
 function Odometer({ value, digits = 6 }) {
   const str = Math.round(Math.max(0, value)).toString().padStart(digits, "0").slice(-digits);
@@ -2505,6 +2506,16 @@ function CajeraView({ onExit }) {
     [entries, selectedDate]
   );
 
+  // Numera los comprobantes del día en el orden en que se fueron agregando.
+  const entriesNumberById = useMemo(() => {
+    const byCreation = [...dayEntries].sort((a, b) => (a.id < b.id ? -1 : 1));
+    const map = {};
+    byCreation.forEach((e, i) => {
+      map[e.id] = i + 1;
+    });
+    return map;
+  }, [dayEntries]);
+
   const addRow = async () => {
     const row = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -2776,6 +2787,14 @@ function CajeraView({ onExit }) {
     color: "#F2F1EC",
     width: "100%",
   };
+  // Casilla con caja visible (como el contador de billetes/monedas), para los
+  // campos donde se escribe una cantidad en dólares.
+  const cellBoxStyle = {
+    background: "#14161A",
+    border: "1px solid #2A2E35",
+    color: "#F2F1EC",
+    width: "100%",
+  };
 
   return (
     <div className="min-h-screen" style={{ background: "#14161A" }}>
@@ -2850,6 +2869,7 @@ function CajeraView({ onExit }) {
           <table className="w-full text-xs" style={{ minWidth: 880 }}>
             <thead>
               <tr style={{ background: "#1E2126", color: "#8A8F98" }}>
+                <th className="text-left font-medium uppercase tracking-wide px-2 py-2.5">N°</th>
                 <th className="text-left font-medium uppercase tracking-wide px-2 py-2.5">Comprobante</th>
                 <th className="text-left font-medium uppercase tracking-wide px-2 py-2.5">Cliente</th>
                 <th className="text-right font-medium uppercase tracking-wide px-2 py-2.5">Portcoll</th>
@@ -2863,6 +2883,7 @@ function CajeraView({ onExit }) {
             <tbody>
               {dayEntries.map((e, i) => (
                 <tr key={e.id} style={{ background: i % 2 ? "#1a1d22" : "#1E2126" }}>
+                  <td className="px-2 py-1.5 font-mono" style={{ color: "#8A8F98" }}>{entriesNumberById[e.id]}</td>
                   <td className="px-2 py-1.5">
                     <select
                       value={e.comprobante}
@@ -2893,8 +2914,8 @@ function CajeraView({ onExit }) {
                       value={e.portcoll}
                       onChange={(ev) => updateRow(e.id, "portcoll", ev.target.value)}
                       onBlur={() => commitRow(e.id)}
-                      className="rounded px-1.5 py-1.5 outline-none text-xs text-left no-spinner"
-                      style={cellInputStyle}
+                      className="rounded px-2 py-1.5 text-xs text-center outline-none no-spinner"
+                      style={cellBoxStyle}
                     />
                   </td>
                   <td className="px-2 py-1.5">
@@ -2904,12 +2925,17 @@ function CajeraView({ onExit }) {
                       value={e.valor}
                       onChange={(ev) => updateRow(e.id, "valor", ev.target.value)}
                       onBlur={() => commitRow(e.id)}
-                      className="rounded px-1.5 py-1.5 outline-none text-xs text-left no-spinner"
-                      style={cellInputStyle}
+                      className="rounded px-2 py-1.5 text-xs text-center outline-none no-spinner"
+                      style={cellBoxStyle}
                     />
                   </td>
-                  <td className="px-2 py-1.5 text-center">
-                    <input type="checkbox" checked={e.ingresado} onChange={() => toggleCheck(e.id, "ingresado")} />
+                  <td className="px-2 py-1.5 text-center" style={{ background: e.ingresado ? "rgba(46, 125, 50, 0.18)" : "transparent" }}>
+                    <input
+                      type="checkbox"
+                      checked={e.ingresado}
+                      onChange={() => toggleCheck(e.id, "ingresado")}
+                      style={{ accentColor: "#2E7D32", width: 16, height: 16 }}
+                    />
                   </td>
                   <td className="px-2 py-1.5 text-center">
                     <input type="checkbox" checked={e.revisado} onChange={() => toggleCheck(e.id, "revisado")} />
@@ -2933,7 +2959,7 @@ function CajeraView({ onExit }) {
               ))}
               {dayEntries.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="text-center py-8 text-xs" style={{ color: "#8A8F98" }}>
+                  <td colSpan={9} className="text-center py-8 text-xs" style={{ color: "#8A8F98" }}>
                     Sin comprobantes para esta fecha todavía.
                   </td>
                 </tr>
@@ -2996,8 +3022,8 @@ function CajeraView({ onExit }) {
                             addTransfer();
                           }
                         }}
-                        className="rounded px-1.5 py-1.5 outline-none text-xs text-left no-spinner"
-                        style={{ background: "transparent", border: "none", color: "#F2F1EC", width: "100%" }}
+                        className="rounded px-2 py-1.5 text-xs text-center outline-none no-spinner"
+                        style={{ background: "#14161A", border: "1px solid #2A2E35", color: "#F2F1EC", width: "100%" }}
                       />
                     </td>
                     <td className="px-2 py-1.5 text-center">
@@ -3068,8 +3094,8 @@ function CajeraView({ onExit }) {
                         value={g.valor}
                         onChange={(ev) => updateEgreso(g.id, "valor", ev.target.value)}
                         onBlur={() => commitEgreso(g.id)}
-                        className="rounded px-1.5 py-1.5 outline-none text-xs text-right no-spinner"
-                        style={{ background: "transparent", border: "none", color: "#FFC72C", width: "100%" }}
+                        className="rounded px-2 py-1.5 text-xs text-center outline-none no-spinner"
+                        style={{ background: "#14161A", border: "1px solid #2A2E35", color: "#FFC72C", width: "100%" }}
                       />
                     </td>
                     <td className="px-1 py-1.5">
