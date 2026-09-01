@@ -589,6 +589,7 @@ async function appendEgreso(item) {
 
 
 
+
 // ---------- odometer ----------
 function Odometer({ value, digits = 6 }) {
   const str = Math.round(Math.max(0, value)).toString().padStart(digits, "0").slice(-digits);
@@ -3015,11 +3016,11 @@ function CajeraView({ onExit }) {
                         }}
                         onChange={(ev) => updateTransfer(t.id, ev.target.value)}
                         onBlur={() => commitTransfer(t.id)}
-                        onKeyDown={(ev) => {
+                        onKeyDown={async (ev) => {
                           if (ev.key === "Enter") {
                             ev.preventDefault();
-                            commitTransfer(t.id);
-                            addTransfer();
+                            await commitTransfer(t.id);
+                            await addTransfer();
                           }
                         }}
                         className="rounded px-2 py-1.5 text-xs text-center outline-none no-spinner"
