@@ -593,6 +593,7 @@ async function appendEgreso(item) {
 
 
 
+
 // ---------- odometer ----------
 function Odometer({ value, digits = 6 }) {
   const str = Math.round(Math.max(0, value)).toString().padStart(digits, "0").slice(-digits);
@@ -1689,11 +1690,21 @@ function AsesorView({ onExit }) {
   // de más reciente a más antigua) — la #1 es la factura más reciente.
   // Numera de más antigua a más reciente (la #1 es la primera factura que
   // hiciste), aunque en pantalla se muestren de más reciente a más antigua.
+  // Numera las ventas dentro de cada mes por separado (la #1 es la primera
+  // factura de ESE mes, y vuelve a empezar en 1 el mes siguiente).
   const mySalesNumberById = useMemo(() => {
-    const byFechaAsc = [...mySales].sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : a.id < b.id ? -1 : 1));
+    const porMes = {};
+    mySales.forEach((s) => {
+      const mes = s.fecha.slice(0, 7);
+      if (!porMes[mes]) porMes[mes] = [];
+      porMes[mes].push(s);
+    });
     const map = {};
-    byFechaAsc.forEach((s, i) => {
-      map[s.id] = i + 1;
+    Object.values(porMes).forEach((lista) => {
+      const ordenAsc = [...lista].sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : a.id < b.id ? -1 : 1));
+      ordenAsc.forEach((s, i) => {
+        map[s.id] = i + 1;
+      });
     });
     return map;
   }, [mySales]);
@@ -4052,11 +4063,22 @@ function AdminView({ onExit }) {
   // Numera de más antigua a más reciente (la #1 es la primera venta registrada
   // por fecha), aunque en pantalla se muestren de más reciente a más antigua.
   // No cambia según el filtro de periodo/asesor.
+  // Numera igual que en la vista del asesor: por asesor y por mes, reiniciando
+  // en 1 cada mes — así el número que ve el administrador coincide exactamente
+  // con el que ve cada asesor para su propia venta.
   const salesNumberById = useMemo(() => {
-    const byFechaAsc = [...sales].sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : a.id < b.id ? -1 : 1));
+    const porGrupo = {};
+    sales.forEach((s) => {
+      const key = `${normalizeKey(s.asesor)}|${s.fecha.slice(0, 7)}`;
+      if (!porGrupo[key]) porGrupo[key] = [];
+      porGrupo[key].push(s);
+    });
     const map = {};
-    byFechaAsc.forEach((s, i) => {
-      map[s.id] = i + 1;
+    Object.values(porGrupo).forEach((lista) => {
+      const ordenAsc = [...lista].sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : a.id < b.id ? -1 : 1));
+      ordenAsc.forEach((s, i) => {
+        map[s.id] = i + 1;
+      });
     });
     return map;
   }, [sales]);
