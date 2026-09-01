@@ -381,6 +381,7 @@ async function appendEgreso(item) {
 }
 
 
+
 // ---------- odometer ----------
 function Odometer({ value, digits = 6 }) {
   const str = Math.round(Math.max(0, value)).toString().padStart(digits, "0").slice(-digits);
@@ -3049,12 +3050,26 @@ function AdminView({ onExit }) {
   const [sales, setSales] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterAsesor, setFilterAsesor] = useState("Todos");
+  const [drilldown, setDrilldown] = useState(null);
+
+  const showDrilldown = (titulo, filterFn) => {
+    const ventas = salesInPeriod
+      .filter(filterFn)
+      .sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
+    setDrilldown({ titulo, ventas });
+  };
+
   const monthKey = currentMonthKey();
   const [periodSelection, setPeriodSelection] = useState(monthKey);
   const [adminTab, setAdminTab] = useState("ventas");
   const [cajaDayFilter, setCajaDayFilter] = useState("todos");
   const [rangeFrom, setRangeFrom] = useState(todayISO());
   const [rangeTo, setRangeTo] = useState(todayISO());
+
+  useEffect(() => {
+    setDrilldown(null);
+  }, [periodSelection, rangeFrom, rangeTo]);
+
   const [budgetUnits, setBudgetUnits] = useState(0);
   const [budgetDollars, setBudgetDollars] = useState(0);
   const [budgetForm, setBudgetForm] = useState({ units: "", dollars: "" });
@@ -3584,6 +3599,26 @@ function AdminView({ onExit }) {
     XLSX.writeFile(wb, `proyecciones-indumot-${todayISO()}.xlsx`);
   };
 
+  const handleDeleteProyeccion = async (id) => {
+    if (!window.confirm("¿Borrar esta proyección? Se elimina también de la pantalla del asesor.")) return;
+    await syncedArrayUpdate({
+      loadFn: loadProyecciones,
+      saveFn: saveProyecciones,
+      mutate: (latest) => latest.filter((p) => p.id !== id),
+      setLocal: setProyecciones,
+    });
+  };
+
+  const handleDeleteAllProyecciones = async () => {
+    if (!window.confirm(`¿Borrar TODAS las ${proyecciones.length} proyecciones de todo el equipo? Esta acción no se puede deshacer.`)) return;
+    await syncedArrayUpdate({
+      loadFn: loadProyecciones,
+      saveFn: saveProyecciones,
+      mutate: () => [],
+      setLocal: setProyecciones,
+    });
+  };
+
   if (!unlocked) {
     return (
       <div className="min-h-screen flex items-center justify-center px-5" style={{ background: "#14161A" }}>
@@ -4000,7 +4035,7 @@ function AdminView({ onExit }) {
               <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-3" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
                 Moto más vendida · {periodLabel}
               </div>
-              <div className="rounded-lg p-4 mb-3" style={{ background: "#1E2126", border: "1px solid #E4002B" }}>
+              <div className="rounded-lg p-4 mb-3 cursor-pointer" onClick={() => showDrilldown(`Moto: ${byModelo[0].modelo}`, (s) => s.modelo === byModelo[0].modelo)} style={{ background: "#1E2126", border: "1px solid #E4002B" }}>
                 <div className="text-lg font-semibold" style={{ color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}>
                   {byModelo[0].modelo}
                 </div>
@@ -4019,7 +4054,7 @@ function AdminView({ onExit }) {
                       contentStyle={{ background: "#1E2126", border: "1px solid #2A2E35", borderRadius: 6, color: "#F2F1EC" }}
                       labelStyle={{ color: "#F2F1EC" }}
                     />
-                    <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                    <Bar dataKey="count" radius={[0, 4, 4, 0]} cursor="pointer" onClick={(data) => showDrilldown(`Moto: ${data.modelo}`, (s) => s.modelo === data.modelo)}>
                       {byModelo.map((_, i) => (
                         <Cell key={i} fill={i === 0 ? "#FFC72C" : "#E4002B"} />
                       ))}
@@ -4033,7 +4068,7 @@ function AdminView({ onExit }) {
               <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-3" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
                 Ventas por canal / origen · {periodLabel}
               </div>
-              <div className="rounded-lg p-4 mb-3" style={{ background: "#1E2126", border: "1px solid #E4002B" }}>
+              <div className="rounded-lg p-4 mb-3 cursor-pointer" onClick={() => showDrilldown(`Canal: ${byCanalVentas[0].origen}`, (s) => s.origen === byCanalVentas[0].origen)} style={{ background: "#1E2126", border: "1px solid #E4002B" }}>
                 <div className="text-lg font-semibold" style={{ color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}>
                   {byCanalVentas[0].origen}
                 </div>
@@ -4052,7 +4087,7 @@ function AdminView({ onExit }) {
                       contentStyle={{ background: "#1E2126", border: "1px solid #2A2E35", borderRadius: 6, color: "#F2F1EC" }}
                       labelStyle={{ color: "#F2F1EC" }}
                     />
-                    <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                    <Bar dataKey="count" radius={[0, 4, 4, 0]} cursor="pointer" onClick={(data) => showDrilldown(`Canal: ${data.origen}`, (s) => s.origen === data.origen)}>
                       {byCanalVentas.map((_, i) => (
                         <Cell key={i} fill={i === 0 ? "#FFC72C" : "#E4002B"} />
                       ))}
@@ -4066,7 +4101,7 @@ function AdminView({ onExit }) {
               <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-3" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
                 Forma de pago más usada · {periodLabel}
               </div>
-              <div className="rounded-lg p-4 mb-3" style={{ background: "#1E2126", border: "1px solid #E4002B" }}>
+              <div className="rounded-lg p-4 mb-3 cursor-pointer" onClick={() => showDrilldown(`Forma de pago: ${byFormaPago[0].formaPago}`, (s) => s.formaPago === byFormaPago[0].formaPago)} style={{ background: "#1E2126", border: "1px solid #E4002B" }}>
                 <div className="text-lg font-semibold" style={{ color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}>
                   {byFormaPago[0].formaPago}
                 </div>
@@ -4085,7 +4120,7 @@ function AdminView({ onExit }) {
                       contentStyle={{ background: "#1E2126", border: "1px solid #2A2E35", borderRadius: 6, color: "#F2F1EC" }}
                       labelStyle={{ color: "#F2F1EC" }}
                     />
-                    <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                    <Bar dataKey="count" radius={[0, 4, 4, 0]} cursor="pointer" onClick={(data) => showDrilldown(`Forma de pago: ${data.formaPago}`, (s) => s.formaPago === data.formaPago)}>
                       {byFormaPago.map((_, i) => (
                         <Cell key={i} fill={i === 0 ? "#FFC72C" : "#E4002B"} />
                       ))}
@@ -4094,6 +4129,47 @@ function AdminView({ onExit }) {
                 </ResponsiveContainer>
               </div>
             </div>
+          </div>
+        )}
+
+        {drilldown && (
+          <div className="rounded-lg p-4 sm:p-5" style={{ background: "#1E2126", border: "1px solid #E4002B" }}>
+            <div className="flex items-center justify-between mb-3">
+              <div className="font-semibold uppercase text-xs tracking-[0.12em]" style={{ color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}>
+                {drilldown.titulo} · {drilldown.ventas.length} {drilldown.ventas.length === 1 ? "venta" : "ventas"}
+              </div>
+              <button onClick={() => setDrilldown(null)} aria-label="Cerrar">
+                <X size={16} color="#8A8F98" />
+              </button>
+            </div>
+            {drilldown.ventas.length === 0 ? (
+              <div className="text-sm text-center py-6" style={{ color: "#8A8F98" }}>Sin ventas para este dato.</div>
+            ) : (
+              <div className="overflow-x-auto rounded-lg" style={{ border: "1px solid #2A2E35" }}>
+                <table className="w-full text-xs" style={{ minWidth: 640 }}>
+                  <thead>
+                    <tr style={{ background: "#14161A", color: "#8A8F98" }}>
+                      {["Asesor", "Fecha", "Cliente", "Modelo", "Forma de pago", "Origen", "Valor"].map((h) => (
+                        <th key={h} className="text-left font-medium uppercase tracking-wide px-3 py-2">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {drilldown.ventas.map((s, i) => (
+                      <tr key={s.id} style={{ background: i % 2 ? "#1a1d22" : "#1E2126", color: "#F2F1EC" }}>
+                        <td className="px-3 py-2 whitespace-nowrap font-medium">{s.asesor}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">{s.fecha}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">{s.cliente}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">{s.modelo}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">{s.formaPago}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">{s.origen}</td>
+                        <td className="px-3 py-2 whitespace-nowrap font-mono font-semibold" style={{ color: "#FFC72C" }}>{money(s.valor / 1.15)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 
@@ -4533,14 +4609,24 @@ function AdminView({ onExit }) {
             <div className="font-semibold uppercase text-xs tracking-[0.12em]" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
               Proyecciones de todo el equipo
             </div>
-            <button
-              onClick={exportProyeccionesExcel}
-              disabled={!proyecciones.length}
-              className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md disabled:opacity-40"
-              style={{ color: "#C9CDD3", border: "1px solid #2A2E35" }}
-            >
-              <Download size={13} /> Excel
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={exportProyeccionesExcel}
+                disabled={!proyecciones.length}
+                className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md disabled:opacity-40"
+                style={{ color: "#C9CDD3", border: "1px solid #2A2E35" }}
+              >
+                <Download size={13} /> Excel
+              </button>
+              <button
+                onClick={handleDeleteAllProyecciones}
+                disabled={!proyecciones.length}
+                className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md disabled:opacity-40"
+                style={{ color: "#FF8A8A", border: "1px solid #E4002B" }}
+              >
+                <Trash2 size={13} /> Borrar todas
+              </button>
+            </div>
           </div>
 
           <div className="rounded-lg p-4 flex flex-col justify-center gap-1 mb-3" style={{ background: "#1E2126", border: "1px solid #2A2E35", maxWidth: 320 }}>
@@ -4585,7 +4671,7 @@ function AdminView({ onExit }) {
               <table className="w-full text-xs" style={{ minWidth: 680 }}>
                 <thead>
                   <tr style={{ background: "#1E2126", color: "#8A8F98" }}>
-                    {["Asesor", "Cliente", "Identificación", "Modelo", "Forma de pago", "Estado", "Valor"].map((h) => (
+                    {["Asesor", "Cliente", "Identificación", "Modelo", "Forma de pago", "Estado", "Valor", ""].map((h) => (
                       <th key={h} className="text-left font-medium uppercase tracking-wide px-3 py-2.5">{h}</th>
                     ))}
                   </tr>
@@ -4606,6 +4692,11 @@ function AdminView({ onExit }) {
                         <td className="px-3 py-2.5 whitespace-nowrap">{p.formaPago}</td>
                         <td className="px-3 py-2.5">{p.estado || "—"}</td>
                         <td className="px-3 py-2.5 whitespace-nowrap font-mono font-semibold" style={{ color: "#FFC72C" }}>{money((Number(p.valor) || 0) / 1.15)}</td>
+                        <td className="px-3 py-2.5 text-center">
+                          <button onClick={() => handleDeleteProyeccion(p.id)} aria-label="Eliminar">
+                            <Trash2 size={14} color="#8A8F98" />
+                          </button>
+                        </td>
                       </tr>
                     ))}
                 </tbody>
