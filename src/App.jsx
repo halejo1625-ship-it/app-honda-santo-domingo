@@ -383,6 +383,7 @@ async function appendEgreso(item) {
 
 
 
+
 // ---------- odometer ----------
 function Odometer({ value, digits = 6 }) {
   const str = Math.round(Math.max(0, value)).toString().padStart(digits, "0").slice(-digits);
@@ -3213,11 +3214,23 @@ function AdminView({ onExit }) {
   const motoSales = useMemo(() => sales.filter(isMoto), [sales]);
   const fuerzaSales = useMemo(() => sales.filter((s) => !isMoto(s)), [sales]);
 
-  const monthSales = useMemo(() => motoSales.filter((s) => s.fecha.startsWith(monthKey)), [motoSales, monthKey]);
+  // Mes que se está revisando en el bloque de presupuesto: si el selector de
+  // periodo apunta a un mes puntual, se usa ese; si está en "todo" o "rango
+  // personalizado", se usa el mes real actual como referencia.
+  const budgetViewMonthKey =
+    periodSelection !== "todo" && periodSelection !== "custom" ? periodSelection : monthKey;
+  const esMesActual = budgetViewMonthKey === monthKey;
+  const viewBudgetUnits = esMesActual ? budgetUnits : (historicalBudget ? historicalBudget.units : 0);
+  const viewBudgetDollars = esMesActual ? budgetDollars : (historicalBudget ? historicalBudget.dollars : 0);
+  // Si se está viendo un mes que ya pasó, ese mes ya se cumplió al 100% —
+  // el ritmo esperado solo tiene sentido calcularlo día a día para el mes en curso.
+  const viewMonthProgressPct = esMesActual ? monthProgressPct() : 100;
+
+  const monthSales = useMemo(() => motoSales.filter((s) => s.fecha.startsWith(budgetViewMonthKey)), [motoSales, budgetViewMonthKey]);
   const unitsSold = monthSales.length;
   const dollarsSold = monthSales.reduce((sum, s) => sum + s.valor, 0) / 1.15;
-  const pctUnits = budgetUnits > 0 ? (unitsSold / budgetUnits) * 100 : 0;
-  const pctDollars = budgetDollars > 0 ? (dollarsSold / budgetDollars) * 100 : 0;
+  const pctUnits = viewBudgetUnits > 0 ? (unitsSold / viewBudgetUnits) * 100 : 0;
+  const pctDollars = viewBudgetDollars > 0 ? (dollarsSold / viewBudgetDollars) * 100 : 0;
 
   const availableMonths = useMemo(() => {
     const set = new Set(sales.map((s) => s.fecha.slice(0, 7)));
@@ -3417,8 +3430,8 @@ function AdminView({ onExit }) {
 
   const presupuestoPorAsesor = useMemo(() => {
     const numAsesores = ASESORES.length || 1;
-    const metaUnidades = budgetUnits / numAsesores;
-    const metaDolares = budgetDollars / numAsesores;
+    const metaUnidades = viewBudgetUnits / numAsesores;
+    const metaDolares = viewBudgetDollars / numAsesores;
     return ASESORES.map((a) => {
       const key = normalizeKey(a.nombre);
       const unidades = monthSalesCountByAsesorKey[key] || 0;
@@ -3433,7 +3446,7 @@ function AdminView({ onExit }) {
         pctDolares: metaDolares > 0 ? (dolares / metaDolares) * 100 : 0,
       };
     });
-  }, [monthSalesCountByAsesorKey, monthSalesDollarsByAsesorKey, budgetUnits, budgetDollars]);
+  }, [monthSalesCountByAsesorKey, monthSalesDollarsByAsesorKey, viewBudgetUnits, viewBudgetDollars]);
 
   const asesorPerformance = useMemo(() => {
     const namesSet = new Set([
@@ -3852,59 +3865,73 @@ function AdminView({ onExit }) {
         <div className="rounded-lg p-4 sm:p-5" style={{ background: "#1E2126", border: "1px solid #E4002B" }}>
           <div className="flex items-center justify-between mb-4">
             <div className="font-semibold uppercase text-xs tracking-[0.14em]" style={{ color: "#E4002B", fontFamily: "'Oswald',sans-serif" }}>
-              Presupuesto · {monthLabel(monthKey)}
+              Presupuesto · {monthLabel(budgetViewMonthKey)}
             </div>
+            {!esMesActual && (
+              <span className="text-[10px] uppercase tracking-wide px-2 py-1 rounded" style={{ background: "#3A2E1F", color: "#FFC72C", border: "1px solid #FFC72C" }}>
+                Mes anterior · solo lectura
+              </span>
+            )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-            <Field label="Presupuesto de unidades">
-              <input
-                type="number"
-                min="0"
-                value={budgetForm.units}
-                onChange={(e) => setBudgetForm({ ...budgetForm, units: e.target.value })}
-                placeholder="Ej. 40"
-                className="rounded-md px-3 py-2.5 outline-none"
-                style={inputStyle}
-              />
-            </Field>
-            <Field label="Presupuesto de dólares">
-              <input
-                type="number"
-                min="0"
-                value={budgetForm.dollars}
-                onChange={(e) => setBudgetForm({ ...budgetForm, dollars: e.target.value })}
-                placeholder="Ej. 120000"
-                className="rounded-md px-3 py-2.5 outline-none"
-                style={inputStyle}
-              />
-            </Field>
-          </div>
+          {esMesActual ? (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                <Field label="Presupuesto de unidades">
+                  <input
+                    type="number"
+                    min="0"
+                    value={budgetForm.units}
+                    onChange={(e) => setBudgetForm({ ...budgetForm, units: e.target.value })}
+                    placeholder="Ej. 40"
+                    className="rounded-md px-3 py-2.5 outline-none"
+                    style={inputStyle}
+                  />
+                </Field>
+                <Field label="Presupuesto de dólares">
+                  <input
+                    type="number"
+                    min="0"
+                    value={budgetForm.dollars}
+                    onChange={(e) => setBudgetForm({ ...budgetForm, dollars: e.target.value })}
+                    placeholder="Ej. 120000"
+                    className="rounded-md px-3 py-2.5 outline-none"
+                    style={inputStyle}
+                  />
+                </Field>
+              </div>
 
-          <div className="flex items-center gap-3 mb-5">
-            <button
-              type="button"
-              onClick={saveBudgetForm}
-              disabled={savingBudget}
-              className="rounded-md px-4 py-2.5 font-semibold uppercase text-xs tracking-[0.08em] flex items-center gap-2 disabled:opacity-50"
-              style={{ background: "#E4002B", color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}
-            >
-              {savingBudget && <Loader2 size={13} className="animate-spin" />}
-              Guardar presupuesto del mes
-            </button>
-            {budgetSaved && <span className="text-xs" style={{ color: "#8FD98F" }}>Guardado ✓</span>}
-          </div>
+              <div className="flex items-center gap-3 mb-5">
+                <button
+                  type="button"
+                  onClick={saveBudgetForm}
+                  disabled={savingBudget}
+                  className="rounded-md px-4 py-2.5 font-semibold uppercase text-xs tracking-[0.08em] flex items-center gap-2 disabled:opacity-50"
+                  style={{ background: "#E4002B", color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}
+                >
+                  {savingBudget && <Loader2 size={13} className="animate-spin" />}
+                  Guardar presupuesto del mes
+                </button>
+                {budgetSaved && <span className="text-xs" style={{ color: "#8FD98F" }}>Guardado ✓</span>}
+              </div>
 
-          {(Number(budgetForm.units) > 0 || Number(budgetForm.dollars) > 0) && (
-            <div className="text-[11px] mb-5" style={{ color: "#8A8F98" }}>
-              Cada uno de los {ASESORES.length} asesores verá su propia meta:{" "}
-              {Number(budgetForm.units) > 0 && (
-                <span style={{ color: "#C9CDD3" }}>{Math.round((Number(budgetForm.units) / ASESORES.length) * 10) / 10} unidades</span>
+              {(Number(budgetForm.units) > 0 || Number(budgetForm.dollars) > 0) && (
+                <div className="text-[11px] mb-5" style={{ color: "#8A8F98" }}>
+                  Cada uno de los {ASESORES.length} asesores verá su propia meta:{" "}
+                  {Number(budgetForm.units) > 0 && (
+                    <span style={{ color: "#C9CDD3" }}>{Math.round((Number(budgetForm.units) / ASESORES.length) * 10) / 10} unidades</span>
+                  )}
+                  {Number(budgetForm.units) > 0 && Number(budgetForm.dollars) > 0 && " · "}
+                  {Number(budgetForm.dollars) > 0 && (
+                    <span style={{ color: "#C9CDD3" }}>{money(Number(budgetForm.dollars) / ASESORES.length)}</span>
+                  )}
+                </div>
               )}
-              {Number(budgetForm.units) > 0 && Number(budgetForm.dollars) > 0 && " · "}
-              {Number(budgetForm.dollars) > 0 && (
-                <span style={{ color: "#C9CDD3" }}>{money(Number(budgetForm.dollars) / ASESORES.length)}</span>
-              )}
+            </>
+          ) : (
+            <div className="text-xs mb-5" style={{ color: "#8A8F98" }}>
+              Estás viendo el presupuesto que quedó guardado para {monthLabel(budgetViewMonthKey)} — no se puede editar un mes que ya pasó.
+              Para cambiar el presupuesto de este mes, ve al selector de arriba y elige {monthLabel(monthKey)}.
             </div>
           )}
 
@@ -3912,30 +3939,30 @@ function AdminView({ onExit }) {
             <ProgressBar
               label="Vas de unidades"
               current={unitsSold}
-              target={budgetUnits}
+              target={viewBudgetUnits}
               pct={pctUnits}
-              expectedPct={monthProgressPct()}
+              expectedPct={viewMonthProgressPct}
               formatCurrent={(v) => `${v} unidades`}
               formatTarget={(v) => `${v} unidades`}
             />
             <ProgressBar
               label="Vas de dólares"
               current={dollarsSold}
-              target={budgetDollars}
+              target={viewBudgetDollars}
               pct={pctDollars}
-              expectedPct={monthProgressPct()}
+              expectedPct={viewMonthProgressPct}
               formatCurrent={(v) => money(v)}
               formatTarget={(v) => money(v)}
             />
           </div>
 
-          {(budgetUnits > 0 || budgetDollars > 0) && (
+          {(viewBudgetUnits > 0 || viewBudgetDollars > 0) && (
             <div className="mt-4">
               <div className="text-[11px] uppercase tracking-[0.12em] font-medium mb-2" style={{ color: "#8A8F98" }}>
                 Presupuesto individual por asesor
               </div>
               <div className="text-[10px] mb-2" style={{ color: "#8A8F98" }}>
-                La línea blanca en cada barra marca en qué % deberían ir, según los días transcurridos del mes ({Math.round(monthProgressPct())}%).
+                La línea blanca en cada barra marca en qué % deberían ir, según los días transcurridos del mes ({Math.round(viewMonthProgressPct)}%).
               </div>
               <div className="flex flex-col gap-2">
                 {presupuestoPorAsesor.map((p) => (
@@ -3957,10 +3984,10 @@ function AdminView({ onExit }) {
                               background: p.pctUnidades >= 100 ? "#2E7D32" : p.pctUnidades >= 70 ? "#FFC72C" : "#E4002B",
                             }}
                           />
-                          <div className="absolute top-0 bottom-0" style={{ left: `${Math.min(100, Math.max(0, monthProgressPct()))}%`, width: 2, background: "#F2F1EC", opacity: 0.85 }} />
+                          <div className="absolute top-0 bottom-0" style={{ left: `${Math.min(100, Math.max(0, viewMonthProgressPct))}%`, width: 2, background: "#F2F1EC", opacity: 0.85 }} />
                         </div>
                         <div className="text-[10px] mt-1" style={{ color: "#8A8F98" }}>
-                          {p.unidades} de {Math.round(p.metaUnidades * 10) / 10} · deberían ir en {Math.round(p.metaUnidades * (monthProgressPct() / 100) * 10) / 10}
+                          {p.unidades} de {Math.round(p.metaUnidades * 10) / 10} · deberían ir en {Math.round(p.metaUnidades * (viewMonthProgressPct / 100) * 10) / 10}
                         </div>
                       </div>
                       <div>
@@ -3976,10 +4003,10 @@ function AdminView({ onExit }) {
                               background: p.pctDolares >= 100 ? "#2E7D32" : p.pctDolares >= 70 ? "#FFC72C" : "#E4002B",
                             }}
                           />
-                          <div className="absolute top-0 bottom-0" style={{ left: `${Math.min(100, Math.max(0, monthProgressPct()))}%`, width: 2, background: "#F2F1EC", opacity: 0.85 }} />
+                          <div className="absolute top-0 bottom-0" style={{ left: `${Math.min(100, Math.max(0, viewMonthProgressPct))}%`, width: 2, background: "#F2F1EC", opacity: 0.85 }} />
                         </div>
                         <div className="text-[10px] mt-1" style={{ color: "#8A8F98" }}>
-                          {money(p.dolares)} de {money(p.metaDolares)} · deberían ir en {money(p.metaDolares * (monthProgressPct() / 100))}
+                          {money(p.dolares)} de {money(p.metaDolares)} · deberían ir en {money(p.metaDolares * (viewMonthProgressPct / 100))}
                         </div>
                       </div>
                     </div>
@@ -4048,18 +4075,6 @@ function AdminView({ onExit }) {
                   </div>
                 </div>
               ))}
-            </div>
-          </div>
-        )}
-
-        {historicalBudget && (historicalBudget.units > 0 || historicalBudget.dollars > 0) && (
-          <div className="rounded-lg p-4" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
-            <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-2" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
-              Presupuesto que estaba fijado para {monthLabel(periodSelection)}
-            </div>
-            <div className="flex flex-wrap gap-4 text-sm">
-              <span style={{ color: "#F2F1EC" }}>{historicalBudget.units} unidades</span>
-              <span style={{ color: "#F2F1EC" }}>{money(historicalBudget.dollars)}</span>
             </div>
           </div>
         )}
