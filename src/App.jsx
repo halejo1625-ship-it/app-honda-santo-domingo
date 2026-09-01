@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { Plus, Trash2, LogOut, Lock, Download, ChevronRight, Loader2, Upload, FileSpreadsheet, MessageCircle, Send, X, RefreshCw, LayoutGrid, Wallet, TrendingUp, Zap, Bell, Users, FileText } from "lucide-react";
+import { Plus, Trash2, LogOut, Lock, Download, ChevronRight, ChevronLeft, Loader2, Upload, FileSpreadsheet, MessageCircle, Send, X, RefreshCw, LayoutGrid, Wallet, TrendingUp, Zap, Bell, Users, FileText } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import * as XLSX from "xlsx";
 import { loadDoc, saveDoc, subscribeChat, sendChatMessage, appendToArray } from "./firebase";
@@ -379,6 +379,7 @@ async function appendEgreso(item) {
   const ok = await appendToArray("caja-egresos", item);
   return ok ? await loadEgresos() : null;
 }
+
 
 
 
@@ -1414,9 +1415,12 @@ function AsesorView({ onExit }) {
 
   // Numera las ventas según el orden mostrado (por fecha de facturación,
   // de más reciente a más antigua) — la #1 es la factura más reciente.
+  // Numera de más antigua a más reciente (la #1 es la primera factura que
+  // hiciste), aunque en pantalla se muestren de más reciente a más antigua.
   const mySalesNumberById = useMemo(() => {
+    const byFechaAsc = [...mySales].sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : a.id < b.id ? -1 : 1));
     const map = {};
-    mySales.forEach((s, i) => {
+    byFechaAsc.forEach((s, i) => {
       map[s.id] = i + 1;
     });
     return map;
@@ -3053,6 +3057,7 @@ function AdminView({ onExit }) {
   const monthKey = currentMonthKey();
   const [periodSelection, setPeriodSelection] = useState(monthKey);
   const [adminTab, setAdminTab] = useState("ventas");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [cajaDayFilter, setCajaDayFilter] = useState("todos");
   const [rangeFrom, setRangeFrom] = useState(todayISO());
   const [rangeTo, setRangeTo] = useState(todayISO());
@@ -3469,10 +3474,13 @@ function AdminView({ onExit }) {
   // Numera TODAS las ventas por fecha de facturación (de más reciente a más
   // antigua) — no cambia según el filtro de periodo/asesor, así el número de
   // una venta siempre es el mismo sin importar qué esté viendo el administrador.
+  // Numera de más antigua a más reciente (la #1 es la primera venta registrada
+  // por fecha), aunque en pantalla se muestren de más reciente a más antigua.
+  // No cambia según el filtro de periodo/asesor.
   const salesNumberById = useMemo(() => {
-    const byFecha = [...sales].sort((a, b) => (a.fecha > b.fecha ? -1 : a.fecha < b.fecha ? 1 : a.id > b.id ? -1 : 1));
+    const byFechaAsc = [...sales].sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : a.id < b.id ? -1 : 1));
     const map = {};
-    byFecha.forEach((s, i) => {
+    byFechaAsc.forEach((s, i) => {
       map[s.id] = i + 1;
     });
     return map;
@@ -3709,10 +3717,16 @@ function AdminView({ onExit }) {
       <ChatWidget senderName="Alejandro" senderRole="Administrador" />
       <div className="flex">
         <aside
-          className="hidden md:flex flex-col shrink-0 sticky"
-          style={{ width: 220, background: "#1E2126", borderRight: "1px solid #2A2E35", top: 58, height: "calc(100vh - 58px)" }}
+          className="hidden md:flex flex-col shrink-0 sticky transition-all"
+          style={{
+            width: sidebarCollapsed ? 64 : 220,
+            background: "#1E2126",
+            borderRight: "1px solid #2A2E35",
+            top: 58,
+            height: "calc(100vh - 58px)",
+          }}
         >
-          <nav className="flex-1 px-3 py-5 flex flex-col gap-1 overflow-y-auto">
+          <nav className="flex-1 px-3 py-5 flex flex-col gap-1 overflow-y-auto overflow-x-hidden">
             {ADMIN_NAV.map((item) => {
               const Icon = item.icon;
               const active = adminTab === item.key;
@@ -3721,18 +3735,32 @@ function AdminView({ onExit }) {
                   key={item.key}
                   type="button"
                   onClick={() => setAdminTab(item.key)}
+                  title={sidebarCollapsed ? item.label : undefined}
                   className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left"
                   style={{
                     background: active ? "rgba(228,0,43,0.14)" : "transparent",
                     color: active ? "#E4002B" : "#C9CDD3",
+                    justifyContent: sidebarCollapsed ? "center" : "flex-start",
                   }}
                 >
-                  <Icon size={17} />
-                  {item.label}
+                  <Icon size={17} className="shrink-0" />
+                  {!sidebarCollapsed && item.label}
                 </button>
               );
             })}
           </nav>
+          <div className="px-3 py-3" style={{ borderTop: "1px solid #2A2E35" }}>
+            <button
+              type="button"
+              onClick={() => setSidebarCollapsed((v) => !v)}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium w-full transition-colors"
+              style={{ color: "#8A8F98", justifyContent: sidebarCollapsed ? "center" : "flex-start" }}
+              title={sidebarCollapsed ? "Expandir menú" : "Colapsar menú"}
+            >
+              {sidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+              {!sidebarCollapsed && "Colapsar"}
+            </button>
+          </div>
         </aside>
 
         <main className="flex-1 min-w-0">
