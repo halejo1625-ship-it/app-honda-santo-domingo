@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { Plus, Trash2, LogOut, Lock, Download, ChevronRight, ChevronLeft, Loader2, Upload, FileSpreadsheet, MessageCircle, Send, X, RefreshCw, LayoutGrid, Wallet, TrendingUp, Zap, Bell, Users, FileText } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { Plus, Trash2, LogOut, Lock, Download, ChevronRight, ChevronLeft, Loader2, Upload, FileSpreadsheet, MessageCircle, Send, X, RefreshCw, LayoutGrid, Wallet, TrendingUp, Zap, Bell, Users, FileText, BarChart3 } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from "recharts";
 import * as XLSX from "xlsx";
 import { loadDoc, saveDoc, subscribeChat, sendChatMessage, appendToArray } from "./firebase";
 
@@ -113,6 +113,22 @@ const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "
 const monthLabel = (monthKey) => {
   const [y, m] = monthKey.split("-").map(Number);
   return `${MESES[m - 1]} ${y}`;
+};
+// Enumera todos los meses ("YYYY-MM") entre dos meses, en orden cronológico ascendente.
+const monthsBetween = (startKey, endKey) => {
+  const [sy, sm] = startKey.split("-").map(Number);
+  const [ey, em] = endKey.split("-").map(Number);
+  const startIdx = sy * 12 + (sm - 1);
+  const endIdx = ey * 12 + (em - 1);
+  const lo = Math.min(startIdx, endIdx);
+  const hi = Math.max(startIdx, endIdx);
+  const out = [];
+  for (let idx = lo; idx <= hi; idx++) {
+    const y = Math.floor(idx / 12);
+    const m = (idx % 12) + 1;
+    out.push(`${y}-${String(m).padStart(2, "0")}`);
+  }
+  return out;
 };
 const daysLeftInMonth = () => {
   const now = new Date();
@@ -379,6 +395,8 @@ async function appendEgreso(item) {
   const ok = await appendToArray("caja-egresos", item);
   return ok ? await loadEgresos() : null;
 }
+
+
 
 
 
@@ -3031,6 +3049,7 @@ const ADMIN_NAV = [
   { key: "caja", label: "Caja", icon: Wallet },
   { key: "proyecciones", label: "Proyecciones", icon: TrendingUp },
   { key: "fuerza", label: "Fuerza", icon: Zap },
+  { key: "estadisticas", label: "Estadísticas", icon: BarChart3 },
   { key: "recordatorios", label: "Recordatorios", icon: Bell },
   { key: "crm", label: "CRM", icon: Users },
   { key: "reunion", label: "Reunión", icon: FileText },
@@ -3058,6 +3077,10 @@ function AdminView({ onExit }) {
   const [periodSelection, setPeriodSelection] = useState(monthKey);
   const [adminTab, setAdminTab] = useState("ventas");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [statsMesInicio, setStatsMesInicio] = useState(monthKey);
+  const [statsMesFin, setStatsMesFin] = useState(monthKey);
+  const [statsBudgets, setStatsBudgets] = useState({});
+  const [statsFiltroAsesor, setStatsFiltroAsesor] = useState("Todos");
   const [cajaDayFilter, setCajaDayFilter] = useState("todos");
   const [rangeFrom, setRangeFrom] = useState(todayISO());
   const [rangeTo, setRangeTo] = useState(todayISO());
@@ -3229,6 +3252,71 @@ function AdminView({ onExit }) {
     set.add(monthKey);
     return Array.from(set).sort().reverse();
   }, [sales, monthKey]);
+
+  const availableMonthsAsc = useMemo(() => [...availableMonths].reverse(), [availableMonths]);
+
+  const statsMonthsList = useMemo(
+    () => monthsBetween(statsMesInicio, statsMesFin),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [statsMesInicio, statsMesFin]
+  );
+
+  useEffect(() => {
+    let cancelado = false;
+    (async () => {
+      const entries = await Promise.all(statsMonthsList.map(async (m) => [m, await loadBudget(m)]));
+      if (!cancelado) {
+        const map = {};
+        entries.forEach(([m, b]) => {
+          map[m] = b;
+        });
+        setStatsBudgets(map);
+      }
+    })();
+    return () => {
+      cancelado = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statsMonthsList.join(",")]);
+
+  const statsHistogramData = useMemo(() => {
+    const inRange = motoSales.filter((s) => {
+      const enRango = statsMonthsList.includes(s.fecha.slice(0, 7));
+      const esDelAsesor = statsFiltroAsesor === "Todos" || s.asesor.trim() === statsFiltroAsesor;
+      return enRango && esDelAsesor;
+    });
+    const totales = Array.from({ length: 31 }, () => 0);
+    inRange.forEach((s) => {
+      const dia = Number(s.fecha.slice(8, 10));
+      if (dia >= 1 && dia <= 31) totales[dia - 1] += s.valor / 1.15;
+    });
+
+    let totalPresupuesto = 0;
+    let totalDias = 0;
+    statsMonthsList.forEach((m) => {
+      const b = statsBudgets[m];
+      if (b && b.dollars > 0) {
+        const [y, mm] = m.split("-").map(Number);
+        const diasDelMes = new Date(y, mm, 0).getDate();
+        totalPresupuesto += b.dollars;
+        totalDias += diasDelMes;
+      }
+    });
+    // Si se filtra por un asesor puntual, la meta diaria es su parte individual
+    // (el presupuesto de la tienda dividido entre los asesores).
+    const numAsesores = statsFiltroAsesor === "Todos" ? 1 : ASESORES.length || 1;
+    const metaDiaria = totalDias > 0 ? totalPresupuesto / totalDias / numAsesores : 0;
+
+    return totales.map((total, i) => ({ dia: i + 1, total, meta: metaDiaria }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [motoSales, statsMonthsList.join(","), statsBudgets, statsFiltroAsesor]);
+
+  const statsMetaDiaria = statsHistogramData[0] ? statsHistogramData[0].meta : 0;
+  const statsMejorDia = useMemo(() => {
+    if (statsHistogramData.every((d) => d.total === 0)) return null;
+    return statsHistogramData.reduce((best, d) => (d.total > best.total ? d : best), statsHistogramData[0]);
+  }, [statsHistogramData]);
+  const statsTotalPeriodo = statsHistogramData.reduce((sum, d) => sum + d.total, 0);
 
   const salesInPeriod = useMemo(() => {
     if (periodSelection === "todo") return motoSales;
@@ -4851,6 +4939,96 @@ function AdminView({ onExit }) {
           )}
         </div>
         </>
+        )}
+
+        {adminTab === "estadisticas" && (
+        <div>
+          <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-1" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
+            Estadísticas · Días del mes que más venden · {statsFiltroAsesor === "Todos" ? "Toda la tienda" : statsFiltroAsesor}
+          </div>
+          <div className="text-[11px] mb-4" style={{ color: "#8A8F98" }}>
+            Suma las ventas de cada día del mes (día 1, día 2, etc.) a lo largo de los meses que elijas — así ves si hay días del mes con más movimiento, comparado contra la meta diaria de esos meses.
+          </div>
+
+          <div className="rounded-lg p-4 sm:p-5 mb-4" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <Field label="Desde">
+                <select value={statsMesInicio} onChange={(e) => setStatsMesInicio(e.target.value)} className="rounded-md px-3 py-2.5 text-sm outline-none" style={inputStyle}>
+                  {availableMonthsAsc.map((m) => (
+                    <option key={m} value={m}>{monthLabel(m)}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Hasta">
+                <select value={statsMesFin} onChange={(e) => setStatsMesFin(e.target.value)} className="rounded-md px-3 py-2.5 text-sm outline-none" style={inputStyle}>
+                  {availableMonthsAsc.map((m) => (
+                    <option key={m} value={m}>{monthLabel(m)}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Asesor">
+                <select value={statsFiltroAsesor} onChange={(e) => setStatsFiltroAsesor(e.target.value)} className="rounded-md px-3 py-2.5 text-sm outline-none" style={inputStyle}>
+                  <option value="Todos">Toda la tienda</option>
+                  {ASESORES.map((a) => (
+                    <option key={a.nombre} value={a.nombre}>{a.nombre}</option>
+                  ))}
+                </select>
+              </Field>
+              <span className="text-xs mt-1 sm:mt-6" style={{ color: "#8A8F98" }}>
+                {statsMonthsList.length} {statsMonthsList.length === 1 ? "mes" : "meses"} incluidos
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+            <div className="rounded-lg p-4 flex flex-col justify-center gap-1" style={{ background: "#1E2126", border: "1px solid #E4002B" }}>
+              <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#8A8F98" }}>Mejor día del mes</span>
+              <span className="font-mono font-semibold text-2xl" style={{ color: "#FFC72C" }}>
+                {statsMejorDia ? statsMejorDia.dia : "—"}
+              </span>
+              <span className="text-xs mt-1" style={{ color: "#8A8F98" }}>{statsMejorDia ? money(statsMejorDia.total) : "Sin ventas en este rango"}</span>
+            </div>
+            <div className="rounded-lg p-4 flex flex-col justify-center gap-1" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+              <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#8A8F98" }}>Meta diaria promedio</span>
+              <span className="font-mono font-semibold text-2xl" style={{ color: "#F2F1EC" }}>{statsMetaDiaria > 0 ? money(statsMetaDiaria) : "—"}</span>
+              <span className="text-xs mt-1" style={{ color: "#8A8F98" }}>según el presupuesto de esos meses</span>
+            </div>
+            <div className="rounded-lg p-4 flex flex-col justify-center gap-1" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+              <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#8A8F98" }}>Total del rango</span>
+              <span className="font-mono font-semibold text-2xl" style={{ color: "#F2F1EC" }}>{money(statsTotalPeriodo)}</span>
+              <span className="text-xs mt-1" style={{ color: "#8A8F98" }}>{monthLabel(statsMonthsList[0] || monthKey)} — {monthLabel(statsMonthsList[statsMonthsList.length - 1] || monthKey)}</span>
+            </div>
+          </div>
+
+          <div className="rounded-lg p-4" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+            <ResponsiveContainer width="100%" height={320}>
+              <BarChart data={statsHistogramData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <CartesianGrid vertical={false} stroke="#2A2E35" />
+                <XAxis dataKey="dia" tick={{ fill: "#8A8F98", fontSize: 10 }} axisLine={{ stroke: "#2A2E35" }} tickLine={false} interval={0} />
+                <YAxis tick={{ fill: "#8A8F98", fontSize: 10 }} axisLine={{ stroke: "#2A2E35" }} tickLine={false} tickFormatter={(v) => `$${v >= 1000 ? `${Math.round(v / 1000)}k` : v}`} />
+                <Tooltip
+                  formatter={(v, name) => [money(v), name === "total" ? "Vendido ese día" : "Meta diaria"]}
+                  labelFormatter={(d) => `Día ${d} del mes`}
+                  contentStyle={{ background: "#1E2126", border: "1px solid #2A2E35", borderRadius: 6, color: "#F2F1EC" }}
+                  labelStyle={{ color: "#F2F1EC" }}
+                />
+                {statsMetaDiaria > 0 && (
+                  <ReferenceLine
+                    y={statsMetaDiaria}
+                    stroke="#FFC72C"
+                    strokeDasharray="4 4"
+                    label={{ value: "Meta diaria", position: "insideTopRight", fill: "#FFC72C", fontSize: 10 }}
+                  />
+                )}
+                <Bar dataKey="total" radius={[3, 3, 0, 0]}>
+                  {statsHistogramData.map((d, i) => (
+                    <Cell key={i} fill={statsMetaDiaria > 0 && d.total >= statsMetaDiaria ? "#2E7D32" : d.total > 0 ? "#E4002B" : "#2A2E35"} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
         )}
 
         {adminTab === "recordatorios" && (
