@@ -384,6 +384,7 @@ async function appendEgreso(item) {
 
 
 
+
 // ---------- odometer ----------
 function Odometer({ value, digits = 6 }) {
   const str = Math.round(Math.max(0, value)).toString().padStart(digits, "0").slice(-digits);
@@ -3635,6 +3636,18 @@ function AdminView({ onExit }) {
     XLSX.writeFile(wb, `proyecciones-indumot-${todayISO()}.xlsx`);
   };
 
+  const updateSaleModelo = async (id, nuevoModelo) => {
+    const localSale = sales.find((s) => s.id === id);
+    if (!localSale) return;
+    const updatedSale = { ...localSale, modelo: nuevoModelo };
+    await syncedArrayUpdate({
+      loadFn: loadSales,
+      saveFn: saveSales,
+      mutate: (latest) => mergeRow(latest, id, updatedSale),
+      setLocal: setSales,
+    });
+  };
+
   const handleDeleteProyeccion = async (id) => {
     if (!window.confirm("¿Borrar esta proyección? Se elimina también de la pantalla del asesor.")) return;
     await syncedArrayUpdate({
@@ -4454,7 +4467,30 @@ function AdminView({ onExit }) {
                       <td className="px-3 py-2.5 whitespace-nowrap">{s.factura}</td>
                       <td className="px-3 py-2.5 whitespace-nowrap">{s.fecha}</td>
                       <td className="px-3 py-2.5 whitespace-nowrap">{s.cliente}</td>
-                      <td className="px-3 py-2.5 whitespace-nowrap">{s.modelo}</td>
+                      <td className="px-3 py-2.5 whitespace-nowrap">
+                        {isMoto(s) ? (
+                          <select
+                            value={s.modelo}
+                            onChange={(e) => updateSaleModelo(s.id, e.target.value)}
+                            className="rounded px-1.5 py-1 text-xs outline-none"
+                            style={{ background: "#14161A", border: "1px solid #2A2E35", color: "#F2F1EC" }}
+                          >
+                            {!MODELOS_MOTO.includes(s.modelo) && s.modelo && (
+                              <option value={s.modelo}>{s.modelo}</option>
+                            )}
+                            {MODELOS_MOTO.map((m) => (
+                              <option key={m} value={m}>{m}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            value={s.modelo}
+                            onChange={(e) => updateSaleModelo(s.id, e.target.value)}
+                            className="rounded px-1.5 py-1 text-xs outline-none"
+                            style={{ background: "#14161A", border: "1px solid #2A2E35", color: "#F2F1EC", width: 140 }}
+                          />
+                        )}
+                      </td>
                       <td className="px-3 py-2.5 whitespace-nowrap">{s.formaPago}</td>
                       <td className="px-3 py-2.5 whitespace-nowrap">{s.origen}</td>
                       <td className="px-3 py-2.5 whitespace-nowrap font-mono font-semibold" style={{ color: "#FFC72C" }}>{money(s.valor)}</td>
