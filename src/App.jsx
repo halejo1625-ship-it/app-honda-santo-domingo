@@ -382,6 +382,7 @@ async function appendEgreso(item) {
 
 
 
+
 // ---------- odometer ----------
 function Odometer({ value, digits = 6 }) {
   const str = Math.round(Math.max(0, value)).toString().padStart(digits, "0").slice(-digits);
@@ -3051,11 +3052,13 @@ function AdminView({ onExit }) {
   const [loading, setLoading] = useState(true);
   const [filterAsesor, setFilterAsesor] = useState("Todos");
   const [drilldown, setDrilldown] = useState(null);
+  const [drilldownFiltroAsesor, setDrilldownFiltroAsesor] = useState("Todos");
 
   const showDrilldown = (titulo, filterFn) => {
     const ventas = salesInPeriod
       .filter(filterFn)
       .sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
+    setDrilldownFiltroAsesor("Todos");
     setDrilldown({ titulo, ventas });
   };
 
@@ -3073,6 +3076,26 @@ function AdminView({ onExit }) {
   const [budgetUnits, setBudgetUnits] = useState(0);
   const [budgetDollars, setBudgetDollars] = useState(0);
   const [budgetForm, setBudgetForm] = useState({ units: "", dollars: "" });
+  const [historicalBudget, setHistoricalBudget] = useState(null);
+
+  // Cuando se revisa un mes específico distinto al actual, trae el presupuesto
+  // que estaba guardado para ESE mes (nunca se borra al cambiar de mes — cada
+  // mes vive en su propio registro).
+  useEffect(() => {
+    const esOtroMes = periodSelection !== "todo" && periodSelection !== "custom" && periodSelection !== monthKey;
+    if (!esOtroMes) {
+      setHistoricalBudget(null);
+      return;
+    }
+    let cancelado = false;
+    loadBudget(periodSelection).then((b) => {
+      if (!cancelado) setHistoricalBudget(b);
+    });
+    return () => {
+      cancelado = true;
+    };
+  }, [periodSelection, monthKey]);
+
   const [savingBudget, setSavingBudget] = useState(false);
   const [budgetSaved, setBudgetSaved] = useState(false);
 
@@ -4029,6 +4052,18 @@ function AdminView({ onExit }) {
           </div>
         )}
 
+        {historicalBudget && (historicalBudget.units > 0 || historicalBudget.dollars > 0) && (
+          <div className="rounded-lg p-4" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+            <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-2" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
+              Presupuesto que estaba fijado para {monthLabel(periodSelection)}
+            </div>
+            <div className="flex flex-wrap gap-4 text-sm">
+              <span style={{ color: "#F2F1EC" }}>{historicalBudget.units} unidades</span>
+              <span style={{ color: "#F2F1EC" }}>{money(historicalBudget.dollars)}</span>
+            </div>
+          </div>
+        )}
+
         {byModelo.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             <div>
@@ -4133,43 +4168,74 @@ function AdminView({ onExit }) {
         )}
 
         {drilldown && (
-          <div className="rounded-lg p-4 sm:p-5" style={{ background: "#1E2126", border: "1px solid #E4002B" }}>
-            <div className="flex items-center justify-between mb-3">
-              <div className="font-semibold uppercase text-xs tracking-[0.12em]" style={{ color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}>
-                {drilldown.titulo} · {drilldown.ventas.length} {drilldown.ventas.length === 1 ? "venta" : "ventas"}
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: "rgba(0,0,0,0.6)" }}
+            onClick={() => setDrilldown(null)}
+          >
+            <div
+              className="rounded-lg p-4 sm:p-5 w-full"
+              style={{ background: "#1E2126", border: "1px solid #E4002B", maxWidth: 880, maxHeight: "85vh", overflowY: "auto" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+                <div className="font-semibold uppercase text-xs tracking-[0.12em]" style={{ color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}>
+                  {drilldown.titulo}
+                </div>
+                <button onClick={() => setDrilldown(null)} aria-label="Cerrar">
+                  <X size={18} color="#8A8F98" />
+                </button>
               </div>
-              <button onClick={() => setDrilldown(null)} aria-label="Cerrar">
-                <X size={16} color="#8A8F98" />
-              </button>
-            </div>
-            {drilldown.ventas.length === 0 ? (
-              <div className="text-sm text-center py-6" style={{ color: "#8A8F98" }}>Sin ventas para este dato.</div>
-            ) : (
-              <div className="overflow-x-auto rounded-lg" style={{ border: "1px solid #2A2E35" }}>
-                <table className="w-full text-xs" style={{ minWidth: 640 }}>
-                  <thead>
-                    <tr style={{ background: "#14161A", color: "#8A8F98" }}>
-                      {["Asesor", "Fecha", "Cliente", "Modelo", "Forma de pago", "Origen", "Valor"].map((h) => (
-                        <th key={h} className="text-left font-medium uppercase tracking-wide px-3 py-2">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {drilldown.ventas.map((s, i) => (
-                      <tr key={s.id} style={{ background: i % 2 ? "#1a1d22" : "#1E2126", color: "#F2F1EC" }}>
-                        <td className="px-3 py-2 whitespace-nowrap font-medium">{s.asesor}</td>
-                        <td className="px-3 py-2 whitespace-nowrap">{s.fecha}</td>
-                        <td className="px-3 py-2 whitespace-nowrap">{s.cliente}</td>
-                        <td className="px-3 py-2 whitespace-nowrap">{s.modelo}</td>
-                        <td className="px-3 py-2 whitespace-nowrap">{s.formaPago}</td>
-                        <td className="px-3 py-2 whitespace-nowrap">{s.origen}</td>
-                        <td className="px-3 py-2 whitespace-nowrap font-mono font-semibold" style={{ color: "#FFC72C" }}>{money(s.valor / 1.15)}</td>
+
+              <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+                <select
+                  value={drilldownFiltroAsesor}
+                  onChange={(e) => setDrilldownFiltroAsesor(e.target.value)}
+                  className="rounded-md px-3 py-2 text-xs outline-none"
+                  style={inputStyle}
+                >
+                  <option value="Todos">Todos los asesores</option>
+                  {ASESORES.map((a) => (
+                    <option key={a.nombre} value={a.nombre}>{a.nombre}</option>
+                  ))}
+                </select>
+                <span className="text-xs" style={{ color: "#8A8F98" }}>
+                  {drilldown.ventas.filter((s) => drilldownFiltroAsesor === "Todos" || s.asesor === drilldownFiltroAsesor).length}{" "}
+                  {drilldown.ventas.filter((s) => drilldownFiltroAsesor === "Todos" || s.asesor === drilldownFiltroAsesor).length === 1 ? "venta" : "ventas"}
+                </span>
+              </div>
+
+              {drilldown.ventas.filter((s) => drilldownFiltroAsesor === "Todos" || s.asesor === drilldownFiltroAsesor).length === 0 ? (
+                <div className="text-sm text-center py-6" style={{ color: "#8A8F98" }}>Sin ventas para este filtro.</div>
+              ) : (
+                <div className="overflow-x-auto rounded-lg" style={{ border: "1px solid #2A2E35" }}>
+                  <table className="w-full text-xs" style={{ minWidth: 640 }}>
+                    <thead>
+                      <tr style={{ background: "#14161A", color: "#8A8F98" }}>
+                        {["Asesor", "Fecha", "Cliente", "Modelo", "Forma de pago", "Origen", "Valor"].map((h) => (
+                          <th key={h} className="text-left font-medium uppercase tracking-wide px-3 py-2">{h}</th>
+                        ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                    </thead>
+                    <tbody>
+                      {drilldown.ventas
+                        .filter((s) => drilldownFiltroAsesor === "Todos" || s.asesor === drilldownFiltroAsesor)
+                        .map((s, i) => (
+                          <tr key={s.id} style={{ background: i % 2 ? "#1a1d22" : "#1E2126", color: "#F2F1EC" }}>
+                            <td className="px-3 py-2 whitespace-nowrap font-medium">{s.asesor}</td>
+                            <td className="px-3 py-2 whitespace-nowrap">{s.fecha}</td>
+                            <td className="px-3 py-2 whitespace-nowrap">{s.cliente}</td>
+                            <td className="px-3 py-2 whitespace-nowrap">{s.modelo}</td>
+                            <td className="px-3 py-2 whitespace-nowrap">{s.formaPago}</td>
+                            <td className="px-3 py-2 whitespace-nowrap">{s.origen}</td>
+                            <td className="px-3 py-2 whitespace-nowrap font-mono font-semibold" style={{ color: "#FFC72C" }}>{money(s.valor / 1.15)}</td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
