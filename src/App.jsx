@@ -15,6 +15,11 @@ function HondaLogo({ size = 20, className = "" }) {
 
 const FORMAS_PAGO = ["CONTADO E/T", "CREDITO HONDA", "CREDITO PORTCOLL", "TARJETA DE CREDITO"];
 const ORIGENES = ["PISO DE VENTA", "DIGITAL", "TIK TOK", "EVENTOS", "REFERIDO", "GESTION EXTERNA", "OTROS"];
+const MODELOS_MOTO = [
+  "NAVI", "DIO", "CB100", "CB1 STAR", "TWISTER", "XBLADE", "XR150", "XR190",
+  "NX190", "TORNADO 300", "SAHARA 300", "XR650", "CBR500", "CB650R", "NX500X",
+  "TRANSALP", "AFRICA TWIN STD", "AFRICA TWIN ADV S",
+];
 const ADMIN_PIN = "2026";
 
 const ASESORES = [
@@ -374,6 +379,7 @@ async function appendEgreso(item) {
   const ok = await appendToArray("caja-egresos", item);
   return ok ? await loadEgresos() : null;
 }
+
 
 // ---------- odometer ----------
 function Odometer({ value, digits = 6 }) {
@@ -1390,6 +1396,17 @@ function AsesorView({ onExit }) {
       .sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
   }, [sales, name]);
 
+  // Numera las ventas en el orden en que se registraron (la primera que subiste es la #1),
+  // sin importar el orden en que se muestren en pantalla (que es por fecha de la factura).
+  const mySalesNumberById = useMemo(() => {
+    const byCreation = [...mySales].sort((a, b) => (a.id < b.id ? -1 : 1));
+    const map = {};
+    byCreation.forEach((s, i) => {
+      map[s.id] = i + 1;
+    });
+    return map;
+  }, [mySales]);
+
   const myMotoSales = useMemo(() => mySales.filter(isMoto), [mySales]);
 
   const myTotal = myMotoSales.reduce((sum, s) => sum + s.valor, 0);
@@ -1788,14 +1805,23 @@ function AsesorView({ onExit }) {
             <input value={form.cliente} onChange={(e) => setForm({ ...form, cliente: e.target.value })} className="rounded-md px-3 py-2.5 outline-none" style={inputStyle} />
           </Field>
           <Field label="Tipo de venta">
-            <select value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value })} className="rounded-md px-3 py-2.5 outline-none" style={inputStyle}>
+            <select value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value, modelo: "" })} className="rounded-md px-3 py-2.5 outline-none" style={inputStyle}>
               {TIPO_VENTA.map((t) => (
                 <option key={t}>{t}</option>
               ))}
             </select>
           </Field>
           <Field label="Modelo">
-            <input value={form.modelo} onChange={(e) => setForm({ ...form, modelo: e.target.value })} placeholder="Ej. Honda CB 190R" className="rounded-md px-3 py-2.5 outline-none" style={inputStyle} />
+            {form.tipo === "MOTOCICLETA" ? (
+              <select value={form.modelo} onChange={(e) => setForm({ ...form, modelo: e.target.value })} className="rounded-md px-3 py-2.5 outline-none" style={inputStyle}>
+                <option value="">Selecciona un modelo...</option>
+                {MODELOS_MOTO.map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            ) : (
+              <input value={form.modelo} onChange={(e) => setForm({ ...form, modelo: e.target.value })} placeholder="Ej. Generador EU22i" className="rounded-md px-3 py-2.5 outline-none" style={inputStyle} />
+            )}
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Forma de pago">
@@ -1872,6 +1898,12 @@ function AsesorView({ onExit }) {
                 >
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 text-sm font-medium" style={{ color: "#F2F1EC" }}>
+                      <span
+                        className="shrink-0 font-mono text-[10px] px-1.5 py-0.5 rounded"
+                        style={{ background: "#14161A", color: "#8A8F98", border: "1px solid #2A2E35" }}
+                      >
+                        #{mySalesNumberById[s.id]}
+                      </span>
                       <span className="truncate">{s.modelo}</span>
                       {!isMoto(s) && (
                         <span
@@ -3396,6 +3428,17 @@ function AdminView({ onExit }) {
     return [...list].sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
   }, [salesInPeriod, filterAsesor]);
 
+  // Numera TODAS las ventas por orden de registro (no cambia según el filtro de
+  // periodo/asesor, así el número de una venta siempre es el mismo).
+  const salesNumberById = useMemo(() => {
+    const byCreation = [...sales].sort((a, b) => (a.id < b.id ? -1 : 1));
+    const map = {};
+    byCreation.forEach((s, i) => {
+      map[s.id] = i + 1;
+    });
+    return map;
+  }, [sales]);
+
   const exportCSV = () => {
     const header = ["Asesor", "Factura", "Fecha", "Cliente", "Modelo", "Forma de pago", "Origen", "Valor", "Entrega", "Observaciones"];
     const rows = filteredSales.map((s) => {
@@ -4230,7 +4273,7 @@ function AdminView({ onExit }) {
               <table className="w-full text-xs" style={{ minWidth: 880 }}>
                 <thead>
                   <tr style={{ background: "#1E2126", color: "#8A8F98" }}>
-                    {["Asesor", "Factura", "Fecha", "Cliente", "Modelo", "Pago", "Origen", "Valor", "Entrega", "Observaciones"].map((h) => (
+                    {["N°", "Asesor", "Factura", "Fecha", "Cliente", "Modelo", "Pago", "Origen", "Valor", "Entrega", "Observaciones"].map((h) => (
                       <th key={h} className="text-left font-medium uppercase tracking-wide px-3 py-2.5">{h}</th>
                     ))}
                   </tr>
@@ -4249,6 +4292,7 @@ function AdminView({ onExit }) {
                         borderLeft: completo ? "3px solid #2E7D32" : "3px solid transparent",
                       }}
                     >
+                      <td className="px-3 py-2.5 whitespace-nowrap font-mono" style={{ color: "#8A8F98" }}>{salesNumberById[s.id]}</td>
                       <td className="px-3 py-2.5 whitespace-nowrap">{s.asesor}</td>
                       <td className="px-3 py-2.5 whitespace-nowrap">{s.factura}</td>
                       <td className="px-3 py-2.5 whitespace-nowrap">{s.fecha}</td>
