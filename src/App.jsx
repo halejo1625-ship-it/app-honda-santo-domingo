@@ -632,6 +632,7 @@ async function appendEgreso(item) {
 
 
 
+
 // ---------- odometer ----------
 function Odometer({ value, digits = 6 }) {
   const str = Math.round(Math.max(0, value)).toString().padStart(digits, "0").slice(-digits);
@@ -4265,16 +4266,19 @@ function AdminView({ onExit }) {
     const recs = [];
     const diasRestantes = daysLeftInMonth();
     const faltaDolares = Math.max(0, budgetDollars - dollarsSold);
+    const ritmoEsperado = monthProgressPct();
 
     if (budgetDollars > 0) {
       if (pctDollars >= 100) {
         recs.push({ tipo: "positivo", texto: `El equipo ya superó la meta de dólares del mes (${Math.round(pctDollars)}%). Buen momento para consolidar el cierre y preparar el siguiente mes.` });
-      } else if (diasRestantes <= 7) {
-        recs.push({ tipo: "alerta", texto: `Quedan ${diasRestantes} ${diasRestantes === 1 ? "día" : "días"} para cerrar el mes y falta ${money(faltaDolares)} para llegar a la meta. Prioricen los prospectos de temperatura ALTA en el CRM y las proyecciones más avanzadas.` });
-      } else if (pctDollars < 60) {
-        recs.push({ tipo: "alerta", texto: `El equipo va en ${Math.round(pctDollars)}% de la meta de dólares, con ${diasRestantes} días restantes. Conviene revisar el ritmo diario de cotizaciones y seguimiento.` });
+      } else if (diasRestantes <= 7 && pctDollars < ritmoEsperado - 10) {
+        recs.push({ tipo: "alerta", texto: `Quedan ${diasRestantes} ${diasRestantes === 1 ? "día" : "días"} para cerrar el mes y falta ${money(faltaDolares)} para llegar a la meta (van en ${Math.round(pctDollars)}%, por debajo del ritmo esperado a esta altura, ${Math.round(ritmoEsperado)}%). Prioricen los prospectos de temperatura ALTA en el CRM y las proyecciones más avanzadas.` });
+      } else if (pctDollars < ritmoEsperado - 15) {
+        recs.push({ tipo: "alerta", texto: `El equipo va en ${Math.round(pctDollars)}% de la meta de dólares, por debajo del ritmo esperado a esta altura del mes (${Math.round(ritmoEsperado)}%), con ${diasRestantes} días restantes. Conviene revisar el ritmo diario de cotizaciones y seguimiento.` });
+      } else if (pctDollars >= ritmoEsperado + 10) {
+        recs.push({ tipo: "positivo", texto: `El equipo va en ${Math.round(pctDollars)}% de la meta de dólares, por encima del ritmo esperado a esta altura del mes (${Math.round(ritmoEsperado)}%) — buen avance.` });
       } else {
-        recs.push({ tipo: "info", texto: `El equipo va en ${Math.round(pctDollars)}% de la meta de dólares, con ${diasRestantes} días restantes — a buen ritmo, mantener el enfoque.` });
+        recs.push({ tipo: "info", texto: `El equipo va en ${Math.round(pctDollars)}% de la meta de dólares, acorde al ritmo esperado a esta altura del mes (${Math.round(ritmoEsperado)}%), con ${diasRestantes} días restantes.` });
       }
     } else {
       recs.push({ tipo: "info", texto: "No hay presupuesto configurado todavía para este mes — cárgalo en la pestaña Ventas para habilitar más recomendaciones automáticas." });
@@ -4301,10 +4305,12 @@ function AdminView({ onExit }) {
     }
 
     presupuestoPorAsesor.forEach((p) => {
-      if (p.metaDolares > 0 && p.pctDolares < 40) {
-        recs.push({ tipo: "individual", texto: `${p.asesor} va en ${Math.round(p.pctDolares)}% de su meta individual — conviene una conversación de acompañamiento esta semana.` });
-      } else if (p.metaDolares > 0 && p.pctDolares >= 100) {
+      if (p.metaDolares > 0 && p.pctDolares >= 100) {
         recs.push({ tipo: "positivo", texto: `${p.asesor} ya cumplió su meta individual del mes (${Math.round(p.pctDolares)}%). Reconocerlo en la reunión ayuda a mantener el ritmo.` });
+      } else if (p.metaDolares > 0 && p.pctDolares < ritmoEsperado - 15) {
+        recs.push({ tipo: "individual", texto: `${p.asesor} va en ${Math.round(p.pctDolares)}% de su meta individual, por debajo del ritmo esperado a esta altura del mes (${Math.round(ritmoEsperado)}%) — conviene una conversación de acompañamiento esta semana.` });
+      } else if (p.metaDolares > 0 && p.pctDolares >= ritmoEsperado + 15) {
+        recs.push({ tipo: "positivo", texto: `${p.asesor} va en ${Math.round(p.pctDolares)}% de su meta, por encima del ritmo esperado a esta altura del mes (${Math.round(ritmoEsperado)}%).` });
       }
     });
 
