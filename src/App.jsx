@@ -630,6 +630,7 @@ async function appendEgreso(item) {
 
 
 
+
 // ---------- odometer ----------
 function Odometer({ value, digits = 6 }) {
   const str = Math.round(Math.max(0, value)).toString().padStart(digits, "0").slice(-digits);
@@ -1337,6 +1338,7 @@ function CRMPanel({ personName, crm, setCrm }) {
 
   const [filtroModelo, setFiltroModelo] = useState("Todos");
   const [filtroPago, setFiltroPago] = useState("Todos");
+  const [filtroMes, setFiltroMes] = useState("todos");
   const [expandedId, setExpandedId] = useState(null);
   const [comentarioTexto, setComentarioTexto] = useState({});
   const [proximaEdit, setProximaEdit] = useState({});
@@ -1345,6 +1347,12 @@ function CRMPanel({ personName, crm, setCrm }) {
     () => crm.filter((p) => p.asesor === personName),
     [crm, personName]
   );
+
+  const mesesDisponibles = useMemo(() => {
+    const set = new Set(misProspectos.map((p) => (p.creadoFecha || "").slice(0, 7)).filter(Boolean));
+    set.add(currentMonthKey());
+    return Array.from(set).sort().reverse();
+  }, [misProspectos]);
 
   const modelosDisponibles = useMemo(
     () => Array.from(new Set(misProspectos.map((p) => p.modeloInteres).filter(Boolean))),
@@ -1355,8 +1363,9 @@ function CRMPanel({ personName, crm, setCrm }) {
     return misProspectos
       .filter((p) => filtroModelo === "Todos" || p.modeloInteres === filtroModelo)
       .filter((p) => filtroPago === "Todos" || p.metodoPago === filtroPago)
+      .filter((p) => filtroMes === "todos" || (p.creadoFecha || "").startsWith(filtroMes))
       .sort((a, b) => (a.creadoFecha < b.creadoFecha ? 1 : -1));
-  }, [misProspectos, filtroModelo, filtroPago]);
+  }, [misProspectos, filtroModelo, filtroPago, filtroMes]);
 
   const handleAdd = async () => {
     if (!nombre.trim() || !telefono.trim() || saving) return;
@@ -1518,6 +1527,12 @@ function CRMPanel({ personName, crm, setCrm }) {
             <option value="Todos">Todas las formas de pago</option>
             {FORMAS_PAGO.map((f) => (
               <option key={f} value={f}>{f}</option>
+            ))}
+          </select>
+          <select value={filtroMes} onChange={(e) => setFiltroMes(e.target.value)} className="rounded-md px-3 py-2.5 text-sm outline-none flex-1" style={inputStyle}>
+            <option value="todos">Todos los meses</option>
+            {mesesDisponibles.map((m) => (
+              <option key={m} value={m}>{monthLabel(m)}</option>
             ))}
           </select>
         </div>
@@ -1748,6 +1763,18 @@ function AsesorView({ onExit }) {
   }, [mySales]);
 
   const myMotoSales = useMemo(() => mySales.filter(isMoto), [mySales]);
+
+  // Filtro de mes para "Mis ventas" — permite ver un mes anterior por separado.
+  const misMesesDisponibles = useMemo(() => {
+    const set = new Set(mySales.map((s) => s.fecha.slice(0, 7)));
+    set.add(monthKey);
+    return Array.from(set).sort().reverse();
+  }, [mySales, monthKey]);
+  const [asesorMesFiltro, setAsesorMesFiltro] = useState("todos");
+  const mySalesFiltradas = useMemo(() => {
+    if (asesorMesFiltro === "todos") return mySales;
+    return mySales.filter((s) => s.fecha.startsWith(asesorMesFiltro));
+  }, [mySales, asesorMesFiltro]);
 
   const myTotal = myMotoSales.reduce((sum, s) => sum + s.valor, 0);
   const myTicket = myMotoSales.length ? myTotal / myMotoSales.length : 0;
@@ -2195,12 +2222,25 @@ function AsesorView({ onExit }) {
 
 
         <div>
-          <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-3" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
-            Mis ventas
+          <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+            <div className="font-semibold uppercase text-xs tracking-[0.12em]" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
+              Mis ventas
+            </div>
+            <select
+              value={asesorMesFiltro}
+              onChange={(e) => setAsesorMesFiltro(e.target.value)}
+              className="rounded-md px-3 py-1.5 text-xs outline-none"
+              style={inputStyle}
+            >
+              <option value="todos">Todos los meses</option>
+              {misMesesDisponibles.map((m) => (
+                <option key={m} value={m}>{monthLabel(m)}</option>
+              ))}
+            </select>
           </div>
-          {mySales.length === 0 ? (
+          {mySalesFiltradas.length === 0 ? (
             <div className="text-sm text-center py-8 rounded-lg" style={{ color: "#8A8F98", background: "#1E2126", border: "1px dashed #2A2E35" }}>
-              Aún no has registrado ventas.
+              {asesorMesFiltro === "todos" ? "Aún no has registrado ventas." : "No registraste ventas en ese mes."}
             </div>
           ) : (
             <div className="overflow-x-auto rounded-lg" style={{ border: "1px solid #2A2E35" }}>
@@ -2213,7 +2253,7 @@ function AsesorView({ onExit }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {mySales.map((s, i) => {
+                  {mySalesFiltradas.map((s, i) => {
                     const progress = entregaProgress(s);
                     const expanded = !!expandedEntrega[s.id];
                     return (
@@ -3434,6 +3474,14 @@ function AdminView({ onExit }) {
   const monthKey = currentMonthKey();
   const [periodSelection, setPeriodSelection] = useState(monthKey);
   const [adminTab, setAdminTab] = useState("ventas");
+
+  // La Reunión siempre debe mostrar datos del mes en curso, con la
+  // información más reciente hasta hoy — sin importar qué mes haya quedado
+  // seleccionado en el filtro de periodo de la pestaña Ventas.
+  useEffect(() => {
+    if (adminTab === "reunion") setPeriodSelection(monthKey);
+  }, [adminTab, monthKey]);
+
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [statsMesInicio, setStatsMesInicio] = useState(monthKey);
   const [statsMesFin, setStatsMesFin] = useState(monthKey);
@@ -4426,7 +4474,7 @@ function AdminView({ onExit }) {
             </select>
           </div>
 
-      <div className="max-w-3xl lg:max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-7">
+      <div className="w-full px-4 sm:px-6 lg:px-10 py-6 flex flex-col gap-7">
         <div className="rounded-lg p-4 sm:p-5" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
           <div className="flex items-center justify-between mb-3">
             <div className="font-semibold uppercase text-xs tracking-[0.14em]" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
@@ -6071,14 +6119,20 @@ function AdminView({ onExit }) {
                 </tr>
               </thead>
               <tbody>
-                {ASESORES.map((a, i) => {
+                {[...ASESORES]
+                  .sort((a, b) => {
+                    const ra = byAsesor.find((r) => normalizeKey(r.asesor) === normalizeKey(a.nombre));
+                    const rb = byAsesor.find((r) => normalizeKey(r.asesor) === normalizeKey(b.nombre));
+                    return (rb ? rb.count : 0) - (ra ? ra.count : 0);
+                  })
+                  .map((a, i) => {
                   const ranked = byAsesor.find((r) => normalizeKey(r.asesor) === normalizeKey(a.nombre));
                   const presu = presupuestoPorAsesor.find((p) => p.asesor === a.nombre);
                   const perf = asesorPerformance.find((r) => r.asesor === a.nombre);
                   const faltaDolares = presu ? Math.max(0, presu.metaDolares - presu.dolares) : 0;
                   const faltaMotos = presu ? Math.max(0, Math.ceil(presu.metaUnidades - presu.unidades)) : 0;
                   return (
-                    <tr key={a.nombre} style={{ background: i % 2 ? "#E9E7DF" : "#1E2126" }}>
+                    <tr key={a.nombre} style={{ background: i % 2 ? "#181a1f" : "#1E2126" }}>
                       <td className="px-2 py-2 font-semibold">{a.nombre}</td>
                       <td className="px-2 py-2">{ranked ? ranked.count : 0}</td>
                       <td className="px-2 py-2 font-mono">{money(ranked ? ranked.total : 0)}</td>
