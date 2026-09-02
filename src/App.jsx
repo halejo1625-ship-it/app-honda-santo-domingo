@@ -631,6 +631,7 @@ async function appendEgreso(item) {
 
 
 
+
 // ---------- odometer ----------
 function Odometer({ value, digits = 6 }) {
   const str = Math.round(Math.max(0, value)).toString().padStart(digits, "0").slice(-digits);
@@ -6186,7 +6187,7 @@ function AdminView({ onExit }) {
                   style={{
                     background: r.tipo === "alerta" ? "#FDECEC" : r.tipo === "positivo" ? "#E9F5EA" : r.tipo === "individual" ? "#FFF4DD" : "#EFEEE9",
                     border: `1px solid ${r.tipo === "alerta" ? "#E4002B" : r.tipo === "positivo" ? "#2E7D32" : r.tipo === "individual" ? "#C98A00" : "#2A2E35"}`,
-                    color: "#F2F1EC",
+                    color: "#14161A",
                   }}
                 >
                   {r.texto}
