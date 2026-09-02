@@ -633,6 +633,7 @@ async function appendEgreso(item) {
 
 
 
+
 // ---------- odometer ----------
 function Odometer({ value, digits = 6 }) {
   const str = Math.round(Math.max(0, value)).toString().padStart(digits, "0").slice(-digits);
@@ -687,16 +688,16 @@ function ProgressBar({ label, current, target, formatCurrent, formatTarget, pct,
   const barColor = pct >= 100 ? "#2E7D32" : pct >= 70 ? "#FFC72C" : "#E4002B";
   const expClamped = expectedPct !== undefined ? Math.min(100, Math.max(0, expectedPct)) : null;
   return (
-    <div className="rounded-lg p-4 flex flex-col gap-2.5" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
-      <div className="flex items-center justify-between">
-        <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#8A8F98" }}>
+    <div className="rounded-lg p-5 flex flex-col gap-3" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+      <div className="flex items-end justify-between gap-2">
+        <span className="uppercase text-xs tracking-[0.14em] font-semibold" style={{ color: "#8A8F98" }}>
           {label}
         </span>
-        <span className="font-mono font-semibold text-sm" style={{ color: barColor }}>
+        <span className="font-mono font-bold leading-none" style={{ color: barColor, fontSize: "2.1rem" }}>
           {Math.round(pct)}%
         </span>
       </div>
-      <div className="w-full h-2.5 rounded-full overflow-hidden relative" style={{ background: "#14161A", border: "1px solid #2A2E35" }}>
+      <div className="w-full h-4 rounded-full overflow-hidden relative" style={{ background: "#14161A", border: "1px solid #2A2E35" }}>
         <div
           className="h-full rounded-full transition-all"
           style={{ width: `${clamped}%`, background: barColor }}
@@ -704,16 +705,19 @@ function ProgressBar({ label, current, target, formatCurrent, formatTarget, pct,
         {expClamped !== null && (
           <div
             className="absolute top-0 bottom-0"
-            style={{ left: `${expClamped}%`, width: 2, background: "#F2F1EC", opacity: 0.85 }}
+            style={{ left: `${expClamped}%`, width: 3, background: "#F2F1EC", opacity: 0.9 }}
           />
         )}
       </div>
-      <div className="text-xs flex items-center justify-between flex-wrap gap-1" style={{ color: "#8A8F98" }}>
-        <span>{formatCurrent(current)} de {formatTarget(target)}</span>
-        {expectedPct !== undefined && (
-          <span>Deberían ir en <span style={{ color: "#F2F1EC", fontWeight: 600 }}>{Math.round(expectedPct)}%</span> ({formatTarget(target * (expectedPct / 100))})</span>
-        )}
+      <div className="flex items-center justify-between flex-wrap gap-1.5">
+        <span className="text-sm font-semibold" style={{ color: "#F2F1EC" }}>{formatCurrent(current)}</span>
+        <span className="text-xs" style={{ color: "#8A8F98" }}>de {formatTarget(target)}</span>
       </div>
+      {expectedPct !== undefined && (
+        <div className="text-xs pt-2" style={{ color: "#8A8F98", borderTop: "1px solid #2A2E35" }}>
+          Deberían ir en <span style={{ color: "#F2F1EC", fontWeight: 700 }}>{Math.round(expectedPct)}%</span> ({formatTarget(target * (expectedPct / 100))})
+        </div>
+      )}
     </div>
   );
 }
@@ -4637,26 +4641,26 @@ function AdminView({ onExit }) {
           </div>
 
           {(viewBudgetUnits > 0 || viewBudgetDollars > 0) && (
-            <div className="mt-4">
-              <div className="text-[11px] uppercase tracking-[0.12em] font-medium mb-2" style={{ color: "#8A8F98" }}>
+            <div className="mt-5">
+              <div className="text-xs uppercase tracking-[0.12em] font-semibold mb-2" style={{ color: "#8A8F98" }}>
                 Presupuesto individual por asesor
               </div>
-              <div className="text-[10px] mb-2" style={{ color: "#8A8F98" }}>
+              <div className="text-xs mb-3" style={{ color: "#8A8F98" }}>
                 La línea blanca en cada barra marca en qué % deberían ir, según los días transcurridos del mes ({Math.round(viewMonthProgressPct)}%).
               </div>
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-3">
                 {presupuestoPorAsesor.map((p) => (
-                  <div key={p.asesor} className="rounded-lg px-4 py-3" style={{ background: "#14161A", border: "1px solid #2A2E35" }}>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium" style={{ color: "#F2F1EC" }}>{p.asesor}</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
+                  <div key={p.asesor} className="rounded-lg px-5 py-4" style={{ background: "#14161A", border: "1px solid #2A2E35" }}>
+                    <div className="text-base font-bold mb-3" style={{ color: "#F2F1EC" }}>{p.asesor}</div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <div className="flex items-center justify-between text-[11px] mb-1">
-                          <span style={{ color: "#8A8F98" }}>Unidades</span>
-                          <span style={{ color: p.pctUnidades >= 100 ? "#2E7D32" : "#FFC72C" }}>{Math.round(p.pctUnidades)}%</span>
+                        <div className="flex items-end justify-between mb-1.5">
+                          <span className="text-xs uppercase tracking-wide font-semibold" style={{ color: "#8A8F98" }}>Unidades</span>
+                          <span className="font-mono font-bold leading-none" style={{ color: p.pctUnidades >= 100 ? "#2E7D32" : p.pctUnidades >= 70 ? "#FFC72C" : "#E4002B", fontSize: "1.6rem" }}>
+                            {Math.round(p.pctUnidades)}%
+                          </span>
                         </div>
-                        <div className="w-full h-1.5 rounded-full overflow-hidden relative" style={{ background: "#2A2E35" }}>
+                        <div className="w-full h-3 rounded-full overflow-hidden relative" style={{ background: "#2A2E35" }}>
                           <div
                             className="h-full rounded-full"
                             style={{
@@ -4664,18 +4668,24 @@ function AdminView({ onExit }) {
                               background: p.pctUnidades >= 100 ? "#2E7D32" : p.pctUnidades >= 70 ? "#FFC72C" : "#E4002B",
                             }}
                           />
-                          <div className="absolute top-0 bottom-0" style={{ left: `${Math.min(100, Math.max(0, viewMonthProgressPct))}%`, width: 2, background: "#F2F1EC", opacity: 0.85 }} />
+                          <div className="absolute top-0 bottom-0" style={{ left: `${Math.min(100, Math.max(0, viewMonthProgressPct))}%`, width: 3, background: "#F2F1EC", opacity: 0.9 }} />
                         </div>
-                        <div className="text-[10px] mt-1" style={{ color: "#8A8F98" }}>
-                          {p.unidades} de {Math.round(p.metaUnidades * 10) / 10} · deberían ir en {Math.round(p.metaUnidades * (viewMonthProgressPct / 100) * 10) / 10}
+                        <div className="flex items-center justify-between mt-1.5">
+                          <span className="text-sm font-semibold" style={{ color: "#F2F1EC" }}>{p.unidades} unidades</span>
+                          <span className="text-xs" style={{ color: "#8A8F98" }}>de {Math.round(p.metaUnidades * 10) / 10}</span>
+                        </div>
+                        <div className="text-[11px] mt-0.5" style={{ color: "#8A8F98" }}>
+                          deberían ir en {Math.round(p.metaUnidades * (viewMonthProgressPct / 100) * 10) / 10}
                         </div>
                       </div>
                       <div>
-                        <div className="flex items-center justify-between text-[11px] mb-1">
-                          <span style={{ color: "#8A8F98" }}>Dólares</span>
-                          <span style={{ color: p.pctDolares >= 100 ? "#2E7D32" : "#FFC72C" }}>{Math.round(p.pctDolares)}%</span>
+                        <div className="flex items-end justify-between mb-1.5">
+                          <span className="text-xs uppercase tracking-wide font-semibold" style={{ color: "#8A8F98" }}>Dólares</span>
+                          <span className="font-mono font-bold leading-none" style={{ color: p.pctDolares >= 100 ? "#2E7D32" : p.pctDolares >= 70 ? "#FFC72C" : "#E4002B", fontSize: "1.6rem" }}>
+                            {Math.round(p.pctDolares)}%
+                          </span>
                         </div>
-                        <div className="w-full h-1.5 rounded-full overflow-hidden relative" style={{ background: "#2A2E35" }}>
+                        <div className="w-full h-3 rounded-full overflow-hidden relative" style={{ background: "#2A2E35" }}>
                           <div
                             className="h-full rounded-full"
                             style={{
@@ -4683,10 +4693,14 @@ function AdminView({ onExit }) {
                               background: p.pctDolares >= 100 ? "#2E7D32" : p.pctDolares >= 70 ? "#FFC72C" : "#E4002B",
                             }}
                           />
-                          <div className="absolute top-0 bottom-0" style={{ left: `${Math.min(100, Math.max(0, viewMonthProgressPct))}%`, width: 2, background: "#F2F1EC", opacity: 0.85 }} />
+                          <div className="absolute top-0 bottom-0" style={{ left: `${Math.min(100, Math.max(0, viewMonthProgressPct))}%`, width: 3, background: "#F2F1EC", opacity: 0.9 }} />
                         </div>
-                        <div className="text-[10px] mt-1" style={{ color: "#8A8F98" }}>
-                          {money(p.dolares)} de {money(p.metaDolares)} · deberían ir en {money(p.metaDolares * (viewMonthProgressPct / 100))}
+                        <div className="flex items-center justify-between mt-1.5">
+                          <span className="text-sm font-semibold" style={{ color: "#F2F1EC" }}>{money(p.dolares)}</span>
+                          <span className="text-xs" style={{ color: "#8A8F98" }}>de {money(p.metaDolares)}</span>
+                        </div>
+                        <div className="text-[11px] mt-0.5" style={{ color: "#8A8F98" }}>
+                          deberían ir en {money(p.metaDolares * (viewMonthProgressPct / 100))}
                         </div>
                       </div>
                     </div>
