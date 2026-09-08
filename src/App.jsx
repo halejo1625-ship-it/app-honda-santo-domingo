@@ -665,6 +665,7 @@ async function appendEgreso(item) {
 
 
 
+
 // ---------- odometer ----------
 function Odometer({ value, digits = 6 }) {
   const str = Math.round(Math.max(0, value)).toString().padStart(digits, "0").slice(-digits);
@@ -1804,17 +1805,6 @@ function AsesorView({ onExit }) {
 
   const myMotoSales = useMemo(() => mySales.filter(isMoto), [mySales]);
 
-  // Medallas del mes — se calculan con las ventas de TODO el equipo (no solo
-  // las propias), para saber quién lidera cada categoría este mes.
-  const medallasMonthSales = useMemo(
-    () => sales.filter((s) => isMoto(s) && s.fecha.startsWith(monthKey)),
-    [sales, monthKey]
-  );
-  const medallasRankings = useMemo(
-    () => computeRankings(medallasMonthSales, medallasQuotes),
-    [medallasMonthSales, medallasQuotes]
-  );
-
   // Filtro de mes para el apartado de Ventas — controla la tabla Y los totales,
   // para que no se vea acumulado: siempre se está viendo UN mes puntual.
   const misMesesDisponibles = useMemo(() => {
@@ -1827,6 +1817,30 @@ function AsesorView({ onExit }) {
   const mySalesFiltradas = useMemo(
     () => mySales.filter((s) => s.fecha.startsWith(asesorMesFiltro)),
     [mySales, asesorMesFiltro]
+  );
+
+  // Trae los cotizados del mes que se elija (para la tasa de cierre de las
+  // medallas) — así las medallas no se quedan fijas en el mes actual.
+  useEffect(() => {
+    let cancelado = false;
+    loadQuotes(asesorMesFiltro).then((q) => {
+      if (!cancelado) setMedallasQuotes(q || []);
+    });
+    return () => {
+      cancelado = true;
+    };
+  }, [asesorMesFiltro]);
+
+  // Medallas del mes — se calculan con las ventas de TODO el equipo (no solo
+  // las propias), del mismo mes que se elija arriba (no se quedan fijas en el
+  // mes actual: si cambias a un mes anterior, las medallas muestran ese mes).
+  const medallasMonthSales = useMemo(
+    () => sales.filter((s) => isMoto(s) && s.fecha.startsWith(asesorMesFiltro)),
+    [sales, asesorMesFiltro]
+  );
+  const medallasRankings = useMemo(
+    () => computeRankings(medallasMonthSales, medallasQuotes),
+    [medallasMonthSales, medallasQuotes]
   );
 
   // Si se está viendo un mes anterior, trae el presupuesto que estaba fijado
@@ -2096,9 +2110,25 @@ function AsesorView({ onExit }) {
           </div>
         )}
 
+        <div className="rounded-lg p-3 sm:p-4 flex items-center justify-between flex-wrap gap-2" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+          <span className="text-xs font-semibold uppercase tracking-[0.12em]" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
+            Viendo:
+          </span>
+          <select
+            value={asesorMesFiltro}
+            onChange={(e) => setAsesorMesFiltro(e.target.value)}
+            className="rounded-md px-3 py-2 text-sm font-semibold outline-none"
+            style={inputStyle}
+          >
+            {misMesesDisponibles.map((m) => (
+              <option key={m} value={m}>{monthLabel(m)}</option>
+            ))}
+          </select>
+        </div>
+
         <div className="rounded-lg p-4" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
           <div className="text-xs font-semibold uppercase tracking-[0.12em] mb-3" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
-            🏆 Medallas del mes · {monthLabel(monthKey)}
+            🏆 Medallas del mes · {monthLabel(asesorMesFiltro)}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
             {[
@@ -2352,20 +2382,8 @@ function AsesorView({ onExit }) {
 
 
         <div>
-          <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
-            <div className="font-semibold uppercase text-xs tracking-[0.12em]" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
-              Mis ventas
-            </div>
-            <select
-              value={asesorMesFiltro}
-              onChange={(e) => setAsesorMesFiltro(e.target.value)}
-              className="rounded-md px-3 py-1.5 text-xs outline-none"
-              style={inputStyle}
-            >
-              {misMesesDisponibles.map((m) => (
-                <option key={m} value={m}>{monthLabel(m)}</option>
-              ))}
-            </select>
+          <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-3" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
+            Mis ventas · {monthLabel(asesorMesFiltro)}
           </div>
           {mySalesFiltradas.length === 0 ? (
             <div className="text-sm text-center py-8 rounded-lg" style={{ color: "#8A8F98", background: "#1E2126", border: "1px dashed #2A2E35" }}>
