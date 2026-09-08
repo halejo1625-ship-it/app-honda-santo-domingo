@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { Plus, Trash2, LogOut, Lock, Download, ChevronRight, ChevronLeft, Loader2, Upload, FileSpreadsheet, MessageCircle, Send, X, RefreshCw, LayoutGrid, Wallet, TrendingUp, Zap, Bell, Users, FileText, BarChart3 } from "lucide-react";
+import { Plus, Trash2, LogOut, Lock, Download, ChevronRight, ChevronLeft, Loader2, Upload, FileSpreadsheet, MessageCircle, Send, X, RefreshCw, LayoutGrid, Wallet, TrendingUp, Zap, Bell, Users, FileText, BarChart3, Trophy, Medal, DollarSign, Target } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine, ComposedChart, Line, LineChart, Legend, Area } from "recharts";
 import * as XLSX from "xlsx";
 import { loadDoc, saveDoc, subscribeChat, sendChatMessage, appendToArray } from "./firebase";
@@ -385,6 +385,35 @@ function findColumn(headers, keywords) {
 function normalizeKey(s) {
   return String(s || "").trim().toLowerCase();
 }
+// Calcula, para un mes puntual, quién lidera cada categoría de reconocimiento:
+// mejor valor vendido ($), más motos vendidas (unidades) y mejor tasa de cierre.
+function computeRankings(monthMotoSales, monthQuotes) {
+  const porAsesor = {};
+  ASESORES.forEach((a) => {
+    porAsesor[a.nombre] = { asesor: a.nombre, dolares: 0, unidades: 0, cotizados: 0 };
+  });
+  monthMotoSales.forEach((s) => {
+    const match = ASESORES.find((a) => normalizeKey(a.nombre) === normalizeKey(s.asesor));
+    if (match) {
+      porAsesor[match.nombre].dolares += s.valor / 1.15;
+      porAsesor[match.nombre].unidades += 1;
+    }
+  });
+  (monthQuotes || []).forEach((q) => {
+    const match = ASESORES.find((a) => normalizeKey(a.nombre) === normalizeKey(q.asesor));
+    if (match) porAsesor[match.nombre].cotizados += 1;
+  });
+  const lista = Object.values(porAsesor).map((p) => ({
+    ...p,
+    tasaCierre: p.cotizados > 0 ? (p.unidades / p.cotizados) * 100 : null,
+  }));
+  const porValor = [...lista].sort((a, b) => b.dolares - a.dolares);
+  const porUnidades = [...lista].sort((a, b) => b.unidades - a.unidades);
+  const porTasa = [...lista]
+    .filter((p) => p.tasaCierre !== null)
+    .sort((a, b) => b.tasaCierre - a.tasaCierre);
+  return { lista, porValor, porUnidades, porTasa };
+}
 function stripAccents(s) {
   return String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
@@ -599,6 +628,7 @@ async function appendEgreso(item) {
   const ok = await appendToArray("caja-egresos", item);
   return ok ? await loadEgresos() : null;
 }
+
 
 
 
@@ -1692,6 +1722,7 @@ function AsesorView({ onExit }) {
   const monthKey = currentMonthKey();
   const [budgetUnits, setBudgetUnits] = useState(0);
   const [budgetDollars, setBudgetDollars] = useState(0);
+  const [medallasQuotes, setMedallasQuotes] = useState([]);
   const [asesorTab, setAsesorTab] = useState("registro");
   const [proyecciones, setProyecciones] = useState([]);
   const [proyeccionError, setProyeccionError] = useState("");
@@ -1701,13 +1732,14 @@ function AsesorView({ onExit }) {
   useEffect(() => {
     setStorageOk(storageAvailable());
     (async () => {
-      const [savedName, allSales, budget, allProyecciones, allRecordatorios, allCrm] = await Promise.all([
+      const [savedName, allSales, budget, allProyecciones, allRecordatorios, allCrm, allQuotes] = await Promise.all([
         loadMyName(),
         loadSales(),
         loadBudget(monthKey),
         loadProyecciones(),
         loadRecordatorios(),
         loadCRM(),
+        loadQuotes(monthKey),
       ]);
       if (savedName && ASESORES.some((a) => a.nombre === savedName)) {
         setName(savedName);
@@ -1719,6 +1751,7 @@ function AsesorView({ onExit }) {
       setProyecciones(allProyecciones);
       setRecordatorios(allRecordatorios);
       setCrm(allCrm);
+      setMedallasQuotes(allQuotes || []);
       setLoading(false);
     })();
   }, []);
@@ -1769,6 +1802,17 @@ function AsesorView({ onExit }) {
   }, [mySales]);
 
   const myMotoSales = useMemo(() => mySales.filter(isMoto), [mySales]);
+
+  // Medallas del mes — se calculan con las ventas de TODO el equipo (no solo
+  // las propias), para saber quién lidera cada categoría este mes.
+  const medallasMonthSales = useMemo(
+    () => sales.filter((s) => isMoto(s) && s.fecha.startsWith(monthKey)),
+    [sales, monthKey]
+  );
+  const medallasRankings = useMemo(
+    () => computeRankings(medallasMonthSales, medallasQuotes),
+    [medallasMonthSales, medallasQuotes]
+  );
 
   // Filtro de mes para "Mis ventas" — permite ver un mes anterior por separado.
   const misMesesDisponibles = useMemo(() => {
@@ -2027,6 +2071,40 @@ function AsesorView({ onExit }) {
             No se detecta guardado en este momento. Cierra y vuelve a abrir la app; si sigue igual, avísale a Alejandro.
           </div>
         )}
+
+        <div className="rounded-lg p-4" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+          <div className="text-xs font-semibold uppercase tracking-[0.12em] mb-3" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
+            🏆 Medallas del mes · {monthLabel(monthKey)}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            {[
+              { titulo: "Mejor valor vendido", icon: DollarSign, lider: medallasRankings.porValor[0], activo: medallasRankings.porValor[0] && medallasRankings.porValor[0].dolares > 0 },
+              { titulo: "Más motos vendidas", icon: Medal, lider: medallasRankings.porUnidades[0], activo: medallasRankings.porUnidades[0] && medallasRankings.porUnidades[0].unidades > 0 },
+              { titulo: "Mejor tasa de cierre", icon: Target, lider: medallasRankings.porTasa[0], activo: medallasRankings.porTasa[0] && medallasRankings.porTasa[0].tasaCierre !== null },
+            ].map((cat) => {
+              const Icon = cat.icon;
+              const soyYo = cat.activo && cat.lider.asesor === name;
+              return (
+                <div
+                  key={cat.titulo}
+                  className="rounded-lg px-3 py-2.5 flex items-center gap-2.5"
+                  style={{
+                    background: soyYo ? "rgba(255,199,44,0.14)" : "#14161A",
+                    border: `1px solid ${soyYo ? "#FFC72C" : "#2A2E35"}`,
+                  }}
+                >
+                  <span style={{ fontSize: 20 }}>{cat.activo ? "🥇" : "—"}</span>
+                  <div className="min-w-0">
+                    <div className="text-[10px] uppercase tracking-wide" style={{ color: "#8A8F98" }}>{cat.titulo}</div>
+                    <div className="text-sm font-bold truncate" style={{ color: soyYo ? "#FFC72C" : "#F2F1EC" }}>
+                      {cat.activo ? (soyYo ? "¡Vas tú! 🎉" : cat.lider.asesor) : "Sin datos"}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
 
         <div className="flex flex-wrap gap-2">
           {ASESOR_NAV.map((item) => {
@@ -3454,6 +3532,7 @@ const ADMIN_NAV = [
   { key: "proyecciones", label: "Proyecciones", icon: TrendingUp },
   { key: "fuerza", label: "Fuerza", icon: Zap },
   { key: "estadisticas", label: "Estadísticas", icon: BarChart3 },
+  { key: "reconocimientos", label: "Reconocimientos", icon: Trophy },
   { key: "recordatorios", label: "Recordatorios", icon: Bell },
   { key: "crm", label: "CRM", icon: Users },
   { key: "reunion", label: "Reunión", icon: FileText },
@@ -3499,6 +3578,8 @@ function AdminView({ onExit }) {
   const [avanceBudgets, setAvanceBudgets] = useState({});
   const [mapaMesInicio, setMapaMesInicio] = useState(monthKey);
   const [mapaMesFin, setMapaMesFin] = useState(monthKey);
+  const [reconMes, setReconMes] = useState(monthKey);
+  const [reconQuotes, setReconQuotes] = useState([]);
   const [cajaDayFilter, setCajaDayFilter] = useState("todos");
   const [rangeFrom, setRangeFrom] = useState(todayISO());
   const [rangeTo, setRangeTo] = useState(todayISO());
@@ -3911,6 +3992,26 @@ function AdminView({ onExit }) {
       })
       .filter(Boolean);
   }, [ventasPorCiudad]);
+
+  // ---------- Reconocimientos (medallas mensuales) ----------
+  useEffect(() => {
+    let cancelado = false;
+    loadQuotes(reconMes).then((q) => {
+      if (!cancelado) setReconQuotes(q || []);
+    });
+    return () => {
+      cancelado = true;
+    };
+  }, [reconMes]);
+
+  const reconMonthSales = useMemo(
+    () => motoSales.filter((s) => s.fecha.startsWith(reconMes)),
+    [motoSales, reconMes]
+  );
+  const reconRankings = useMemo(
+    () => computeRankings(reconMonthSales, reconQuotes),
+    [reconMonthSales, reconQuotes]
+  );
 
   const salesInPeriod = useMemo(() => {
     if (periodSelection === "todo") return motoSales;
@@ -5942,6 +6043,74 @@ function AdminView({ onExit }) {
                 )}
               </div>
             </div>
+          </div>
+        </div>
+        )}
+
+        {adminTab === "reconocimientos" && (
+        <div>
+          <div className="font-semibold uppercase text-xs tracking-[0.12em] mb-1" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
+            Reconocimientos · Medallas del mes
+          </div>
+          <div className="text-[11px] mb-4" style={{ color: "#8A8F98" }}>
+            Cada mes se otorgan 3 medallas: mejor valor vendido, más motos vendidas, y mejor tasa de cierre.
+          </div>
+
+          <div className="rounded-lg p-4 sm:p-5 mb-5" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+            <Field label="Mes">
+              <select value={reconMes} onChange={(e) => setReconMes(e.target.value)} className="rounded-md px-3 py-2.5 text-sm outline-none" style={inputStyle}>
+                {availableMonthsAsc.map((m) => (
+                  <option key={m} value={m}>{monthLabel(m)}</option>
+                ))}
+              </select>
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              { titulo: "Mejor valor vendido", icon: DollarSign, lista: reconRankings.porValor, formatValor: (p) => money(p.dolares), sub: (p) => `${p.unidades} ${p.unidades === 1 ? "unidad" : "unidades"}` },
+              { titulo: "Más motos vendidas", icon: Medal, lista: reconRankings.porUnidades, formatValor: (p) => `${p.unidades} ${p.unidades === 1 ? "unidad" : "unidades"}`, sub: (p) => money(p.dolares) },
+              { titulo: "Mejor tasa de cierre", icon: Target, lista: reconRankings.porTasa, formatValor: (p) => `${Math.round(p.tasaCierre)}%`, sub: (p) => `${p.unidades}/${p.cotizados} cotizados` },
+            ].map((cat) => {
+              const Icon = cat.icon;
+              const lider = cat.lista[0];
+              const tieneDatos = lider && (cat.titulo === "Mejor tasa de cierre" ? lider.tasaCierre !== null : lider.dolares > 0 || lider.unidades > 0);
+              return (
+                <div key={cat.titulo} className="rounded-lg p-5" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+                  <div className="flex items-center gap-2 mb-4">
+                    <Icon size={16} color="#FFC72C" />
+                    <span className="text-xs font-semibold uppercase tracking-[0.1em]" style={{ color: "#8A8F98" }}>{cat.titulo}</span>
+                  </div>
+                  {!tieneDatos ? (
+                    <div className="text-sm text-center py-6" style={{ color: "#8A8F98" }}>Sin datos suficientes este mes.</div>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      {cat.lista
+                        .filter((p) => (cat.titulo === "Mejor tasa de cierre" ? p.tasaCierre !== null : true))
+                        .map((p, i) => (
+                          <div
+                            key={p.asesor}
+                            className="flex items-center justify-between gap-2 rounded-lg px-3 py-2.5"
+                            style={{
+                              background: i === 0 ? "rgba(255,199,44,0.12)" : "#14161A",
+                              border: `1px solid ${i === 0 ? "#FFC72C" : "#2A2E35"}`,
+                            }}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span style={{ fontSize: 18 }}>{i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉"}</span>
+                              <span className="text-sm font-semibold truncate" style={{ color: "#F2F1EC" }}>{p.asesor}</span>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <div className="font-mono text-sm font-bold" style={{ color: i === 0 ? "#FFC72C" : "#F2F1EC" }}>{cat.formatValor(p)}</div>
+                              <div className="text-[10px]" style={{ color: "#8A8F98" }}>{cat.sub(p)}</div>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
         )}
