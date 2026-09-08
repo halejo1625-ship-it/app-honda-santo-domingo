@@ -664,6 +664,7 @@ async function appendEgreso(item) {
 
 
 
+
 // ---------- odometer ----------
 function Odometer({ value, digits = 6 }) {
   const str = Math.round(Math.max(0, value)).toString().padStart(digits, "0").slice(-digits);
@@ -1814,29 +1815,52 @@ function AsesorView({ onExit }) {
     [medallasMonthSales, medallasQuotes]
   );
 
-  // Filtro de mes para "Mis ventas" — permite ver un mes anterior por separado.
+  // Filtro de mes para el apartado de Ventas — controla la tabla Y los totales,
+  // para que no se vea acumulado: siempre se está viendo UN mes puntual.
   const misMesesDisponibles = useMemo(() => {
     const set = new Set(mySales.map((s) => s.fecha.slice(0, 7)));
     set.add(monthKey);
     return Array.from(set).sort().reverse();
   }, [mySales, monthKey]);
-  const [asesorMesFiltro, setAsesorMesFiltro] = useState("todos");
-  const mySalesFiltradas = useMemo(() => {
-    if (asesorMesFiltro === "todos") return mySales;
-    return mySales.filter((s) => s.fecha.startsWith(asesorMesFiltro));
-  }, [mySales, asesorMesFiltro]);
+  const [asesorMesFiltro, setAsesorMesFiltro] = useState(monthKey);
+  const esAsesorMesActual = asesorMesFiltro === monthKey;
+  const mySalesFiltradas = useMemo(
+    () => mySales.filter((s) => s.fecha.startsWith(asesorMesFiltro)),
+    [mySales, asesorMesFiltro]
+  );
+
+  // Si se está viendo un mes anterior, trae el presupuesto que estaba fijado
+  // ESE mes (nunca se borra al cambiar de mes — cada mes vive por separado).
+  const [asesorHistBudget, setAsesorHistBudget] = useState(null);
+  useEffect(() => {
+    if (esAsesorMesActual) {
+      setAsesorHistBudget(null);
+      return;
+    }
+    let cancelado = false;
+    loadBudget(asesorMesFiltro).then((b) => {
+      if (!cancelado) setAsesorHistBudget(b);
+    });
+    return () => {
+      cancelado = true;
+    };
+  }, [asesorMesFiltro, esAsesorMesActual]);
 
   const myTotal = myMotoSales.reduce((sum, s) => sum + s.valor, 0);
   const myTicket = myMotoSales.length ? myTotal / myMotoSales.length : 0;
 
   const numAsesores = ASESORES.length || 1;
-  const myBudgetUnits = budgetUnits / numAsesores;
-  const myBudgetDollars = budgetDollars / numAsesores;
-  const myMonthSales = useMemo(() => myMotoSales.filter((s) => s.fecha.startsWith(monthKey)), [myMotoSales, monthKey]);
+  const viewBudgetUnitsTotal = esAsesorMesActual ? budgetUnits : (asesorHistBudget ? asesorHistBudget.units : 0);
+  const viewBudgetDollarsTotal = esAsesorMesActual ? budgetDollars : (asesorHistBudget ? asesorHistBudget.dollars : 0);
+  const myBudgetUnits = viewBudgetUnitsTotal / numAsesores;
+  const myBudgetDollars = viewBudgetDollarsTotal / numAsesores;
+  const myMonthSales = useMemo(() => mySalesFiltradas.filter(isMoto), [mySalesFiltradas]);
   const myUnitsSoldMonth = myMonthSales.length;
   const myDollarsSoldMonth = myMonthSales.reduce((sum, s) => sum + s.valor, 0) / 1.15;
   const pctUnitsMine = myBudgetUnits > 0 ? (myUnitsSoldMonth / myBudgetUnits) * 100 : 0;
   const pctDollarsMine = myBudgetDollars > 0 ? (myDollarsSoldMonth / myBudgetDollars) * 100 : 0;
+  // Si es un mes ya cerrado, el ritmo esperado es el 100% (el mes ya pasó completo).
+  const asesorMonthProgressPct = esAsesorMesActual ? monthProgressPct() : 100;
 
   const myProyecciones = useMemo(() => {
     const norm = name.trim().toLowerCase();
@@ -2141,33 +2165,40 @@ function AsesorView({ onExit }) {
 
         {asesorTab === "registro" && (
         <>
-        {(budgetUnits > 0 || budgetDollars > 0) && (
+        {(viewBudgetUnitsTotal > 0 || viewBudgetDollarsTotal > 0) && (
           <div className="rounded-lg p-4 sm:p-5" style={{ background: "#1E2126", border: "1px solid #E4002B" }}>
-            <div className="font-semibold uppercase text-xs tracking-[0.14em] mb-1" style={{ color: "#E4002B", fontFamily: "'Oswald',sans-serif" }}>
-              Mi presupuesto · {monthLabel(monthKey)}
+            <div className="flex items-center justify-between flex-wrap gap-2 mb-1">
+              <div className="font-semibold uppercase text-xs tracking-[0.14em]" style={{ color: "#E4002B", fontFamily: "'Oswald',sans-serif" }}>
+                Mi presupuesto · {monthLabel(asesorMesFiltro)}
+              </div>
+              {!esAsesorMesActual && (
+                <span className="text-[10px] uppercase tracking-wide px-2 py-1 rounded" style={{ background: "#3A2E1F", color: "#FFC72C", border: "1px solid #FFC72C" }}>
+                  Mes anterior
+                </span>
+              )}
             </div>
             <div className="text-[11px] mb-3" style={{ color: "#8A8F98" }}>
               Presupuesto total del equipo dividido entre {ASESORES.length} asesores
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {budgetUnits > 0 && (
+              {viewBudgetUnitsTotal > 0 && (
                 <ProgressBar
                   label="Vas de unidades"
                   current={myUnitsSoldMonth}
                   target={myBudgetUnits}
                   pct={pctUnitsMine}
-                  expectedPct={monthProgressPct()}
+                  expectedPct={asesorMonthProgressPct}
                   formatCurrent={(v) => `${v} unidades`}
                   formatTarget={(v) => `${Math.round(v * 10) / 10} unidades`}
                 />
               )}
-              {budgetDollars > 0 && (
+              {viewBudgetDollarsTotal > 0 && (
                 <ProgressBar
                   label="Vas de dólares"
                   current={myDollarsSoldMonth}
                   target={myBudgetDollars}
                   pct={pctDollarsMine}
-                  expectedPct={monthProgressPct()}
+                  expectedPct={asesorMonthProgressPct}
                   formatCurrent={(v) => money(v)}
                   formatTarget={(v) => money(v)}
                 />
@@ -2191,7 +2222,7 @@ function AsesorView({ onExit }) {
           </div>
           <div className="rounded-lg p-4 flex flex-col justify-center gap-1" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
             <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#8A8F98" }}>
-              Total vendido
+              Total vendido · {monthLabel(asesorMesFiltro)}
             </span>
             <span className="font-mono font-semibold text-xl" style={{ color: "#F2F1EC" }}>
               {money(myDollarsSoldMonth)}
@@ -2199,11 +2230,26 @@ function AsesorView({ onExit }) {
             <span className="text-xs mt-1" style={{ color: "#8A8F98" }}>
               {myMonthSales.length} {myMonthSales.length === 1 ? "venta" : "ventas"}
             </span>
-            <span className="text-[10px] mt-1" style={{ color: "#8A8F98" }}>
-              {daysLeftInMonth() === 0 ? "Último día del mes" : `${daysLeftInMonth()} ${daysLeftInMonth() === 1 ? "día" : "días"} para cerrar el mes`}
-            </span>
           </div>
         </div>
+
+        {esAsesorMesActual ? (
+          <div
+            className="rounded-lg p-4 flex items-center justify-between flex-wrap gap-2"
+            style={{ background: "#1E2126", border: `1px solid ${daysLeftInMonth() <= 3 ? "#E4002B" : "#2A2E35"}` }}
+          >
+            <span className="uppercase text-xs tracking-[0.14em] font-semibold" style={{ color: "#8A8F98" }}>
+              {daysLeftInMonth() === 0 ? "Cierre del mes" : "Faltan para cerrar el mes"}
+            </span>
+            <span className="font-mono font-bold" style={{ color: daysLeftInMonth() <= 3 ? "#E4002B" : "#FFC72C", fontSize: "2.4rem", lineHeight: 1 }}>
+              {daysLeftInMonth() === 0 ? "¡Hoy!" : `${daysLeftInMonth()} ${daysLeftInMonth() === 1 ? "día" : "días"}`}
+            </span>
+          </div>
+        ) : (
+          <div className="rounded-lg p-3 text-center text-xs font-semibold" style={{ background: "#1E2126", border: "1px solid #2A2E35", color: "#8A8F98" }}>
+            Mes cerrado — estás viendo los resultados finales de {monthLabel(asesorMesFiltro)}
+          </div>
+        )}
 
         <div
           className="rounded-lg p-4 sm:p-5 flex flex-col gap-3.5"
@@ -2316,7 +2362,6 @@ function AsesorView({ onExit }) {
               className="rounded-md px-3 py-1.5 text-xs outline-none"
               style={inputStyle}
             >
-              <option value="todos">Todos los meses</option>
               {misMesesDisponibles.map((m) => (
                 <option key={m} value={m}>{monthLabel(m)}</option>
               ))}
@@ -2324,7 +2369,7 @@ function AsesorView({ onExit }) {
           </div>
           {mySalesFiltradas.length === 0 ? (
             <div className="text-sm text-center py-8 rounded-lg" style={{ color: "#8A8F98", background: "#1E2126", border: "1px dashed #2A2E35" }}>
-              {asesorMesFiltro === "todos" ? "Aún no has registrado ventas." : "No registraste ventas en ese mes."}
+              {esAsesorMesActual ? "Aún no has registrado ventas este mes." : "No registraste ventas en ese mes."}
             </div>
           ) : (
             <div className="overflow-x-auto rounded-lg" style={{ border: "1px solid #2A2E35" }}>
