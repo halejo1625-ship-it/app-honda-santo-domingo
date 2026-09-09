@@ -446,14 +446,19 @@ async function parseQuotesFile(file) {
   const asesorIdx = findColumn(headers, ["asesor", "vendedor", "ejecutivo"]);
   const canalIdx = findColumn(headers, ["canal", "origen", "fuente", "medio"]);
   const clienteIdx = findColumn(headers, ["cliente", "nombre"]);
+  const categoriaIdx = findColumn(headers, ["com_categoria", "categoria", "categoría"]);
   const dataRows = rows.slice(1).filter((r) => r.some((c) => String(c || "").trim() !== ""));
   return dataRows.map((r) => ({
     asesor: asesorIdx >= 0 ? resolveAsesorName(r[asesorIdx]) : "",
     asesorOriginal: asesorIdx >= 0 ? String(r[asesorIdx] || "").trim() : "",
     canal: canalIdx >= 0 ? String(r[canalIdx] || "").trim() || "Sin canal" : "Sin canal",
     cliente: clienteIdx >= 0 ? String(r[clienteIdx] || "").trim() : "",
+    categoria: categoriaIdx >= 0 ? String(r[categoriaIdx] || "").trim() : "",
   }));
 }
+// Un cotizado es de "Producto de fuerza" si su COM_CATEGORIA lo indica así
+// (se acepta cualquier variante que contenga la palabra "FUERZA").
+const esCotizadoFuerza = (q) => String(q.categoria || "").toUpperCase().includes("FUERZA");
 
 // ---------- storage helpers ----------
 function withTimeout(promise, ms = 8000) {
@@ -628,6 +633,8 @@ async function appendEgreso(item) {
   const ok = await appendToArray("caja-egresos", item);
   return ok ? await loadEgresos() : null;
 }
+
+
 
 
 
@@ -3779,10 +3786,17 @@ function AdminView({ onExit }) {
         setUploadingQuotes(false);
         return;
       }
-      const ok = await saveQuotes(monthKey, parsed);
+      // Siempre se guarda en el mes que se está viendo (el actual o uno
+      // anterior) — reemplaza lo que hubiera, dejando siempre la última
+      // información subida para ese mes.
+      const ok = await saveQuotes(budgetViewMonthKey, parsed);
       if (ok) {
-        setQuotes(parsed);
-        setQuotesFileName(file.name);
+        if (esMesActual) {
+          setQuotes(parsed);
+          setQuotesFileName(file.name);
+        } else {
+          setHistoricalQuotes(parsed);
+        }
         setDiscardedQuotesCount(discarded);
       } else {
         setQuotesError("No se pudo guardar el archivo. Intenta de nuevo.");
@@ -4223,6 +4237,16 @@ function AdminView({ onExit }) {
     });
     return map;
   }, [viewQuotes]);
+
+  // Cuántos cotizados de cada asesor son específicamente de Producto de Fuerza
+  // (según la columna COM_CATEGORIA del Excel subido).
+  const fuerzaQuotesPorAsesor = useMemo(() => {
+    return ASESORES.map((a) => {
+      const total = viewQuotes.filter((q) => normalizeKey(q.asesor) === normalizeKey(a.nombre) && esCotizadoFuerza(q)).length;
+      return { asesor: a.nombre, total };
+    });
+  }, [viewQuotes]);
+  const fuerzaQuotesTotal = fuerzaQuotesPorAsesor.reduce((sum, p) => sum + p.total, 0);
 
   const quotesByCanal = useMemo(() => {
     const map = {};
@@ -5121,61 +5145,48 @@ function AdminView({ onExit }) {
             Cotizaciones y tasa de cierre · {monthLabel(budgetViewMonthKey)}
           </div>
 
-          {esMesActual ? (
-            <div className="rounded-lg p-4 sm:p-5 flex flex-col gap-3" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <label
-                  className="flex items-center justify-center gap-2 rounded-md px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.08em] cursor-pointer shrink-0"
-                  style={{ background: "#E4002B", color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}
-                >
-                  {uploadingQuotes ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-                  Subir Excel de cotizados
-                  <input type="file" accept=".xlsx,.xls,.csv" onChange={handleQuotesUpload} className="hidden" disabled={uploadingQuotes} />
-                </label>
-                <div className="text-xs" style={{ color: "#8A8F98" }}>
-                  {quotes.length > 0 ? (
-                    <>
-                      <FileSpreadsheet size={12} className="inline mr-1" style={{ verticalAlign: "-2px" }} />
-                      {quotes.length} clientes cotizados cargados{quotesFileName ? ` · ${quotesFileName}` : ""}
-                    </>
-                  ) : (
-                    "Sube el Excel con los clientes cotizados de este mes (columnas de asesor y canal)."
-                  )}
-                </div>
+          <div className="rounded-lg p-4 sm:p-5 flex flex-col gap-3" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+            {!esMesActual && (
+              <div className="text-[11px] uppercase tracking-wide px-2 py-1 rounded self-start" style={{ background: "#3A2E1F", color: "#FFC72C", border: "1px solid #FFC72C" }}>
+                Estás viendo {monthLabel(budgetViewMonthKey)} — mes anterior
               </div>
-              {quotesError && (
-                <div className="text-xs rounded-md px-3 py-2" style={{ color: "#FFD3D3", background: "#3A1F1F", border: "1px solid #E4002B" }}>
-                  {quotesError}
-                </div>
-              )}
-              {quotes.length > 0 && (
-                <div className="text-[11px]" style={{ color: "#8A8F98" }}>
-                  Subir un nuevo archivo reemplaza las cotizaciones cargadas este mes.
-                </div>
-              )}
-              {discardedQuotesCount > 0 && (
-                <div className="text-xs rounded-md px-3 py-2" style={{ color: "#FFC72C", background: "#3A2E1F", border: "1px solid #FFC72C" }}>
-                  {discardedQuotesCount} fila{discardedQuotesCount === 1 ? "" : "s"} descartada{discardedQuotesCount === 1 ? "" : "s"} por no pertenecer a Adrian, Fernanda o Steven.
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="rounded-lg p-4 sm:p-5" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+            )}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <label
+                className="flex items-center justify-center gap-2 rounded-md px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.08em] cursor-pointer shrink-0"
+                style={{ background: "#E4002B", color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}
+              >
+                {uploadingQuotes ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                Subir Excel de cotizados
+                <input type="file" accept=".xlsx,.xls,.csv" onChange={handleQuotesUpload} className="hidden" disabled={uploadingQuotes} />
+              </label>
               <div className="text-xs" style={{ color: "#8A8F98" }}>
                 {viewQuotes.length > 0 ? (
                   <>
                     <FileSpreadsheet size={12} className="inline mr-1" style={{ verticalAlign: "-2px" }} />
-                    Ese mes se subieron {viewQuotes.length} cotizados. Estás viendo un mes anterior — no se puede subir un archivo nuevo aquí.
+                    {viewQuotes.length} clientes cotizados cargados{esMesActual && quotesFileName ? ` · ${quotesFileName}` : ""}
                   </>
                 ) : (
-                  "No se subió ningún archivo de cotizados para este mes."
+                  `Sube el Excel con los clientes cotizados de ${monthLabel(budgetViewMonthKey)} (columnas de asesor, canal y COM_CATEGORIA).`
                 )}
               </div>
-              <div className="text-[11px] mt-1" style={{ color: "#8A8F98" }}>
-                Para subir el Excel del mes en curso, ve al selector de arriba y elige {monthLabel(monthKey)}.
-              </div>
             </div>
-          )}
+            {quotesError && (
+              <div className="text-xs rounded-md px-3 py-2" style={{ color: "#FFD3D3", background: "#3A1F1F", border: "1px solid #E4002B" }}>
+                {quotesError}
+              </div>
+            )}
+            {viewQuotes.length > 0 && (
+              <div className="text-[11px]" style={{ color: "#8A8F98" }}>
+                Subir un nuevo archivo reemplaza las cotizaciones guardadas de {monthLabel(budgetViewMonthKey)} — siempre queda la última información subida.
+              </div>
+            )}
+            {discardedQuotesCount > 0 && (
+              <div className="text-xs rounded-md px-3 py-2" style={{ color: "#FFC72C", background: "#3A2E1F", border: "1px solid #FFC72C" }}>
+                {discardedQuotesCount} fila{discardedQuotesCount === 1 ? "" : "s"} descartada{discardedQuotesCount === 1 ? "" : "s"} por no pertenecer a Adrian, Fernanda o Steven.
+              </div>
+            )}
+          </div>
 
           {viewQuotes.length > 0 && (
             <>
@@ -5211,6 +5222,25 @@ function AdminView({ onExit }) {
                 </div>
               </div>
 
+              {fuerzaQuotesTotal > 0 && (
+                <div className="rounded-lg p-4 mt-3" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="uppercase text-[11px] tracking-[0.14em] font-medium" style={{ color: "#8A8F98" }}>
+                      Cotizados de Producto de Fuerza por asesor
+                    </span>
+                    <span className="font-mono font-semibold text-sm" style={{ color: "#FFC72C" }}>{fuerzaQuotesTotal} en total</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {fuerzaQuotesPorAsesor.map((p) => (
+                      <div key={p.asesor} className="flex items-center justify-between rounded-lg px-3 py-2" style={{ background: "#14161A", border: "1px solid #2A2E35" }}>
+                        <span className="text-sm font-medium" style={{ color: "#F2F1EC" }}>{p.asesor}</span>
+                        <span className="font-mono font-semibold" style={{ color: "#FFC72C" }}>{p.total}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="mt-3 flex flex-col gap-2">
                 {asesorPerformance.map((a) => (
                   <div key={a.asesor} className="flex items-center justify-between rounded-lg px-4 py-2.5 flex-wrap gap-2" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
@@ -5234,13 +5264,14 @@ function AdminView({ onExit }) {
                   Clientes cotizados por asesor y canal
                 </div>
                 <div className="overflow-x-auto rounded-lg" style={{ border: "1px solid #2A2E35" }}>
-                  <table className="w-full text-xs" style={{ minWidth: 420 }}>
+                  <table className="w-full text-xs" style={{ minWidth: 560 }}>
                     <thead>
                       <tr style={{ background: "#1E2126", color: "#8A8F98" }}>
                         <th className="text-left font-medium uppercase tracking-wide px-3 py-2.5">Asesor</th>
                         {canalNames.map((c) => (
                           <th key={c} className="text-right font-medium uppercase tracking-wide px-3 py-2.5 whitespace-nowrap">{c}</th>
                         ))}
+                        <th className="text-right font-medium uppercase tracking-wide px-3 py-2.5 whitespace-nowrap" style={{ color: "#FFC72C" }}>Producto de Fuerza</th>
                         <th className="text-right font-medium uppercase tracking-wide px-3 py-2.5">Total</th>
                       </tr>
                     </thead>
@@ -5248,7 +5279,8 @@ function AdminView({ onExit }) {
                       {ASESORES.map((a) => {
                         const row = quotesMatrix[a.nombre] || {};
                         const total = canalNames.reduce((sum, c) => sum + (row[c] || 0), 0);
-                        return { nombre: a.nombre, row, total };
+                        const fuerza = (fuerzaQuotesPorAsesor.find((p) => p.asesor === a.nombre) || {}).total || 0;
+                        return { nombre: a.nombre, row, total, fuerza };
                       })
                         .sort((a, b) => b.total - a.total)
                         .map((a, i) => (
@@ -5259,6 +5291,9 @@ function AdminView({ onExit }) {
                                 {a.row[c] || 0}
                               </td>
                             ))}
+                            <td className="px-3 py-2.5 text-right font-mono font-semibold" style={{ color: a.fuerza ? "#FFC72C" : "#4A4E56" }}>
+                              {a.fuerza}
+                            </td>
                             <td className="px-3 py-2.5 text-right font-mono font-semibold" style={{ color: "#FFC72C" }}>{a.total}</td>
                           </tr>
                         ))}
@@ -5274,6 +5309,7 @@ function AdminView({ onExit }) {
                             </td>
                           );
                         })}
+                        <td className="px-3 py-2.5 text-right font-mono font-semibold" style={{ color: "#FFC72C" }}>{fuerzaQuotesTotal}</td>
                         <td className="px-3 py-2.5 text-right font-mono font-bold" style={{ color: "#FFC72C" }}>
                           {ASESORES.reduce((sum, a) => sum + canalNames.reduce((s2, c) => s2 + ((quotesMatrix[a.nombre] || {})[c] || 0), 0), 0)}
                         </td>
