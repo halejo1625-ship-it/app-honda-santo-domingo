@@ -37,6 +37,20 @@ export async function loadDoc(key, fallback) {
   }
 }
 
+// Igual que loadDoc, pero para datos críticos donde hay que distinguir "no
+// hay nada guardado todavía" (documento no existe → lista vacía real) de "no
+// se pudo cargar" (falla de red/tiempo agotado → null). Evita que la app
+// muestre "vacío" en silencio cuando en realidad no pudo conectarse.
+export async function loadDocOrFail(key) {
+  try {
+    const snap = await withTimeout(getDoc(doc(db, COLLECTION, key)));
+    return { ok: true, value: snap.exists() ? snap.data().value : [] };
+  } catch (e) {
+    console.error("Firestore load error:", key, e);
+    return { ok: false, value: null };
+  }
+}
+
 export async function saveDoc(key, value) {
   try {
     await withTimeout(setDoc(doc(db, COLLECTION, key), { value, updatedAt: Date.now() }));
