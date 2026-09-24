@@ -436,6 +436,71 @@ function resolveAsesorName(raw) {
   }
   return String(raw || "").trim();
 }
+// Convierte una fecha de Excel (puede venir como número serial, objeto Date,
+// o texto en varios formatos) a "YYYY-MM-DD".
+function parseExcelDate(val) {
+  if (val === null || val === undefined || val === "") return "";
+  if (val instanceof Date) {
+    return val.toISOString().slice(0, 10);
+  }
+  if (typeof val === "number") {
+    const ms = Math.round((val - 25569) * 86400 * 1000);
+    const d = new Date(ms);
+    if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+    return "";
+  }
+  const str = String(val).trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(str)) return str.slice(0, 10);
+  const m = str.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+  if (m) {
+    const [, d, mo, y] = m;
+    return `${y}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
+  }
+  return str;
+}
+// Lee un Excel exportado del sistema oficial de facturación y lo convierte al
+// formato de venta de Compass — pensado para restaurar ventas que falten
+// (recuperación), no para el registro normal del día a día.
+async function parseSalesImportFile(file) {
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, { type: "array" });
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+  if (!rows.length) return [];
+  const headers = rows[0].map((h) => String(h || "").trim());
+  const facturaIdx = findColumn(headers, ["factura", "n° factura", "numero factura", "num factura"]);
+  const fechaIdx = findColumn(headers, ["fecha"]);
+  const clienteIdx = findColumn(headers, ["cliente", "nombre"]);
+  const ciudadIdx = findColumn(headers, ["ciudad"]);
+  const modeloIdx = findColumn(headers, ["modelo"]);
+  const formaPagoIdx = findColumn(headers, ["forma de pago", "forma pago", "pago"]);
+  const origenIdx = findColumn(headers, ["origen", "canal"]);
+  const valorIdx = findColumn(headers, ["valor", "total", "precio", "monto"]);
+  const asesorIdx = findColumn(headers, ["asesor", "vendedor", "ejecutivo"]);
+  const tipoIdx = findColumn(headers, ["tipo"]);
+  const observacionesIdx = findColumn(headers, ["observaciones", "observacion", "nota"]);
+  const dataRows = rows.slice(1).filter((r) => r.some((c) => String(c || "").trim() !== ""));
+  return dataRows.map((r, i) => {
+    const modelo = modeloIdx >= 0 ? String(r[modeloIdx] || "").trim() : "";
+    const tipoTexto = tipoIdx >= 0 ? String(r[tipoIdx] || "").toUpperCase() : "";
+    const valorTexto = valorIdx >= 0 ? String(r[valorIdx] || "") : "";
+    return {
+      id: `import-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 6)}`,
+      asesor: asesorIdx >= 0 ? resolveAsesorName(r[asesorIdx]) : "",
+      factura: facturaIdx >= 0 ? String(r[facturaIdx] || "").trim() : "",
+      fecha: fechaIdx >= 0 ? parseExcelDate(r[fechaIdx]) : "",
+      cliente: clienteIdx >= 0 ? String(r[clienteIdx] || "").trim() : "",
+      ciudad: ciudadIdx >= 0 ? String(r[ciudadIdx] || "").trim() : "",
+      modelo,
+      formaPago: (formaPagoIdx >= 0 && String(r[formaPagoIdx] || "").trim()) || FORMAS_PAGO[0],
+      origen: (origenIdx >= 0 && String(r[origenIdx] || "").trim()) || ORIGENES[0],
+      valor: parseMoneyInput(valorTexto),
+      observaciones: observacionesIdx >= 0 ? String(r[observacionesIdx] || "").trim() : "",
+      tipo: tipoTexto.includes("FUERZA") ? "PRODUCTO DE FUERZA" : "MOTOCICLETA",
+    };
+  });
+}
+
 async function parseQuotesFile(file) {
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf, { type: "array" });
@@ -682,6 +747,7 @@ async function appendEgreso(item) {
   if (updated === null) updated = await loadEgresos();
   return updated;
 }
+
 
 
 
@@ -3778,6 +3844,204 @@ function AdminView({ onExit }) {
   const [savingBudget, setSavingBudget] = useState(false);
   const [budgetSaved, setBudgetSaved] = useState(false);
 
+  // ---------- Importar ventas desde Excel (recuperación) ----------
+  const [importSalesPreview, setImportSalesPreview] = useState(null); // { nuevas, duplicadas, sinFecha }
+  const [importingSales, setImportingSales] = useState(false);
+  const [importSalesError, setImportSalesError] = useState("");
+  const [importSalesDone, setImportSalesDone] = useState(null); // cuántas se importaron al confirmar
+
+  const handleSalesImportSelect = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    setImportSalesError("");
+    setImportSalesDone(null);
+    setImportingSales(true);
+    try {
+      const parsed = await parseSalesImportFile(file);
+      if (!parsed.length) {
+        setImportSalesError("No se encontraron filas con datos en el archivo.");
+        setImportingSales(false);
+        return;
+      }
+      // Evita duplicar ventas que ya existan (mismo N° de factura, sin importar mayúsculas/espacios).
+      const facturasExistentes = new Set(sales.map((s) => normalizeKey(s.factura)).filter(Boolean));
+      const nuevas = [];
+      const duplicadas = [];
+      const sinFecha = [];
+      parsed.forEach((row) => {
+        const facturaKey = normalizeKey(row.factura);
+        if (facturaKey && facturasExistentes.has(facturaKey)) {
+          duplicadas.push(row);
+        } else if (!row.fecha) {
+          sinFecha.push(row);
+        } else {
+          nuevas.push(row);
+        }
+      });
+      setImportSalesPreview({ nuevas, duplicadas, sinFecha });
+    } catch (err) {
+      setImportSalesError("No se pudo leer el archivo. Verifica que sea un .xlsx o .csv válido.");
+    }
+    setImportingSales(false);
+  };
+
+  const handleSalesImportConfirm = async () => {
+    if (!importSalesPreview || importSalesPreview.nuevas.length === 0) return;
+    setImportingSales(true);
+    setImportSalesError("");
+    // Relee lo más reciente justo antes de guardar, para no pisar ventas que
+    // se hayan registrado mientras se revisaba la vista previa.
+    const latest = await loadSales();
+    if (latest === null) {
+      setImportSalesError("No se pudo confirmar el estado actual de las ventas (conexión). Intenta de nuevo sin cerrar esta pantalla.");
+      setImportingSales(false);
+      return;
+    }
+    const facturasExistentes = new Set(latest.map((s) => normalizeKey(s.factura)).filter(Boolean));
+    const aInsertar = importSalesPreview.nuevas.filter((row) => {
+      const key = normalizeKey(row.factura);
+      return !key || !facturasExistentes.has(key);
+    });
+    const merged = [...latest, ...aInsertar];
+    const ok = await saveSales(merged);
+    if (ok) {
+      setSales(merged);
+      setImportSalesDone(aInsertar.length);
+      setImportSalesPreview(null);
+    } else {
+      setImportSalesError("No se pudo guardar la importación. Revisa tu conexión e intenta de nuevo.");
+    }
+    setImportingSales(false);
+  };
+
+  // ---------- Descargar respaldo completo (todo Compass) en Excel ----------
+  const [exportingAll, setExportingAll] = useState(false);
+  const [exportAllError, setExportAllError] = useState("");
+  const handleExportAllData = async () => {
+    setExportingAll(true);
+    setExportAllError("");
+    try {
+      const meses = availableMonths;
+      const [budgetsAll, quotesAll] = await Promise.all([
+        Promise.all(meses.map(async (m) => ({ mes: m, ...(await loadBudget(m)) }))),
+        Promise.all(meses.map(async (m) => ({ mes: m, items: (await loadQuotes(m)) || [] }))),
+      ]);
+
+      const wb = XLSX.utils.book_new();
+
+      const ventasSheet = XLSX.utils.json_to_sheet(
+        sales.map((s) => ({
+          Asesor: s.asesor,
+          Factura: s.factura,
+          Fecha: s.fecha,
+          Cliente: s.cliente,
+          Ciudad: s.ciudad || "",
+          Modelo: s.modelo,
+          Tipo: s.tipo || "MOTOCICLETA",
+          "Forma de pago": s.formaPago,
+          Origen: s.origen,
+          Valor: s.valor,
+          Observaciones: s.observaciones || "",
+          Entrega: JSON.stringify(s.entrega || {}),
+          ID: s.id,
+        }))
+      );
+      XLSX.utils.book_append_sheet(wb, ventasSheet, "Ventas");
+
+      const proyeccionesSheet = XLSX.utils.json_to_sheet(
+        proyecciones.map((p) => ({
+          Asesor: p.asesor,
+          Cliente: p.cliente || "",
+          Modelo: p.modelo || "",
+          Valor: p.valor,
+          Fecha: p.fecha || "",
+          ID: p.id,
+        }))
+      );
+      XLSX.utils.book_append_sheet(wb, proyeccionesSheet, "Proyecciones");
+
+      const recordatoriosSheet = XLSX.utils.json_to_sheet(
+        recordatorios.map((r) => ({
+          Destinatario: r.destinatario,
+          Mensaje: r.mensaje || r.texto || "",
+          "Del administrador": r.esDeAdmin ? "Sí" : "No",
+          Leído: r.leido ? "Sí" : "No",
+          Fecha: r.fecha || "",
+          ID: r.id,
+        }))
+      );
+      XLSX.utils.book_append_sheet(wb, recordatoriosSheet, "Recordatorios");
+
+      const crmSheet = XLSX.utils.json_to_sheet(
+        crm.map((p) => ({
+          Asesor: p.asesor,
+          Cliente: p.cliente || "",
+          Teléfono: p.telefono || "",
+          "Modelo interés": p.modeloInteres || "",
+          "Forma de pago": p.metodoPago || "",
+          Temperatura: p.temperatura || "",
+          "Próxima gestión": p.proximaGestion || "",
+          "Creado (fecha)": p.creadoFecha || "",
+          ID: p.id,
+        }))
+      );
+      XLSX.utils.book_append_sheet(wb, crmSheet, "CRM");
+
+      const cajaSheet = XLSX.utils.json_to_sheet(
+        cajaEntries.map((e) => ({
+          Fecha: e.fecha,
+          Cajera: e.cajera || "",
+          Comprobante: e.comprobante || "",
+          Cliente: e.cliente || "",
+          Portcoll: e.portcoll,
+          Valor: e.valor,
+          Ingresado: e.ingresado ? "Sí" : "No",
+          Revisado: e.revisado ? "Sí" : "No",
+          Observaciones: e.observaciones || "",
+          ID: e.id,
+        }))
+      );
+      XLSX.utils.book_append_sheet(wb, cajaSheet, "Caja");
+
+      const transferSheet = XLSX.utils.json_to_sheet(
+        transferencias.map((t) => ({
+          Fecha: t.fecha,
+          Cajera: t.cajera || "",
+          Valor: t.valor,
+          ID: t.id,
+        }))
+      );
+      XLSX.utils.book_append_sheet(wb, transferSheet, "Transferencias");
+
+      const egresosSheet = XLSX.utils.json_to_sheet(
+        egresos.map((g) => ({
+          Fecha: g.fecha,
+          Cajera: g.cajera || "",
+          Concepto: g.concepto || "",
+          Valor: g.valor,
+          ID: g.id,
+        }))
+      );
+      XLSX.utils.book_append_sheet(wb, egresosSheet, "Egresos");
+
+      const budgetsSheet = XLSX.utils.json_to_sheet(
+        budgetsAll.map((b) => ({ Mes: monthLabel(b.mes), Clave: b.mes, Unidades: b.units || 0, Dólares: b.dollars || 0 }))
+      );
+      XLSX.utils.book_append_sheet(wb, budgetsSheet, "Presupuestos");
+
+      const quotesFlat = quotesAll.flatMap((q) =>
+        q.items.map((item) => ({ Mes: monthLabel(q.mes), Asesor: item.asesor, Canal: item.canal, Cliente: item.cliente || "", Categoría: item.categoria || "" }))
+      );
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(quotesFlat), "Cotizados");
+
+      XLSX.writeFile(wb, `Compass_Respaldo_${todayISO()}.xlsx`);
+    } catch (err) {
+      setExportAllError("No se pudo generar el respaldo. Revisa tu conexión e intenta de nuevo.");
+    }
+    setExportingAll(false);
+  };
+
   const [quotes, setQuotes] = useState([]);
   const [uploadingQuotes, setUploadingQuotes] = useState(false);
   const [quotesError, setQuotesError] = useState("");
@@ -4834,6 +5098,125 @@ function AdminView({ onExit }) {
 
         {adminTab === "ventas" && (
         <>
+        <div className="rounded-lg p-4 sm:p-5" style={{ background: "#1E2126", border: "1px solid #2E7D32" }}>
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <div className="font-semibold uppercase text-xs tracking-[0.14em] mb-1" style={{ color: "#8FD98F", fontFamily: "'Oswald',sans-serif" }}>
+                Respaldo completo de Compass
+              </div>
+              <div className="text-[11px]" style={{ color: "#8A8F98" }}>
+                Descarga toda la información en un solo Excel (ventas, proyecciones, recordatorios, CRM, caja, presupuestos y cotizados). Guárdalo en tu computadora periódicamente por si algo vuelve a fallar en Firebase.
+              </div>
+            </div>
+            <button
+              onClick={handleExportAllData}
+              disabled={exportingAll}
+              className="flex items-center gap-2 rounded-md px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.08em] shrink-0 disabled:opacity-50"
+              style={{ background: "#2E7D32", color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}
+            >
+              {exportingAll ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+              Descargar respaldo (Excel)
+            </button>
+          </div>
+          {exportAllError && (
+            <div className="text-xs rounded-md px-3 py-2 mt-3" style={{ color: "#FFD3D3", background: "#3A1F1F", border: "1px solid #E4002B" }}>
+              {exportAllError}
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-lg p-4 sm:p-5" style={{ background: "#1E2126", border: "1px solid #2A2E35" }}>
+          <div className="font-semibold uppercase text-xs tracking-[0.14em] mb-1" style={{ color: "#8A8F98", fontFamily: "'Oswald',sans-serif" }}>
+            Importar ventas desde Excel (recuperación)
+          </div>
+          <div className="text-[11px] mb-3" style={{ color: "#8A8F98" }}>
+            Sube un Excel exportado del sistema oficial de facturación para restaurar ventas que falten. No duplica — si el N° de factura ya existe, esa fila se omite. Columnas reconocidas: factura, fecha, cliente, ciudad, modelo, forma de pago, origen, valor, asesor, tipo, observaciones.
+          </div>
+          <label
+            className="inline-flex items-center justify-center gap-2 rounded-md px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.08em] cursor-pointer"
+            style={{ background: "#2A2E35", color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}
+          >
+            {importingSales ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+            Elegir archivo
+            <input type="file" accept=".xlsx,.xls,.csv" onChange={handleSalesImportSelect} className="hidden" disabled={importingSales} />
+          </label>
+
+          {importSalesError && (
+            <div className="text-xs rounded-md px-3 py-2 mt-3" style={{ color: "#FFD3D3", background: "#3A1F1F", border: "1px solid #E4002B" }}>
+              {importSalesError}
+            </div>
+          )}
+
+          {importSalesDone !== null && (
+            <div className="text-xs rounded-md px-3 py-2 mt-3" style={{ color: "#8FD98F", background: "#3A1F1F", border: "1px solid #2E7D32" }}>
+              Se importaron {importSalesDone} {importSalesDone === 1 ? "venta" : "ventas"} correctamente.
+            </div>
+          )}
+
+          {importSalesPreview && (
+            <div className="mt-3 rounded-lg p-3" style={{ background: "#14161A", border: "1px solid #2A2E35" }}>
+              <div className="text-xs mb-2" style={{ color: "#F2F1EC" }}>
+                <span style={{ color: "#8FD98F", fontWeight: 700 }}>{importSalesPreview.nuevas.length}</span> ventas nuevas para importar
+                {importSalesPreview.duplicadas.length > 0 && (
+                  <> · <span style={{ color: "#8A8F98" }}>{importSalesPreview.duplicadas.length} ya existían (se omiten)</span></>
+                )}
+                {importSalesPreview.sinFecha.length > 0 && (
+                  <> · <span style={{ color: "#FFC72C" }}>{importSalesPreview.sinFecha.length} sin fecha reconocida (no se importan)</span></>
+                )}
+              </div>
+              {importSalesPreview.nuevas.length > 0 && (
+                <div className="overflow-x-auto rounded-md mb-3" style={{ border: "1px solid #2A2E35", maxHeight: 260, overflowY: "auto" }}>
+                  <table className="w-full text-[11px]" style={{ minWidth: 640 }}>
+                    <thead>
+                      <tr style={{ background: "#1E2126", color: "#8A8F98" }}>
+                        {["Factura", "Fecha", "Asesor", "Cliente", "Modelo", "Valor"].map((h) => (
+                          <th key={h} className="text-left font-medium uppercase tracking-wide px-2 py-1.5">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {importSalesPreview.nuevas.slice(0, 50).map((s) => (
+                        <tr key={s.id} style={{ color: "#F2F1EC" }}>
+                          <td className="px-2 py-1 whitespace-nowrap">{s.factura || "—"}</td>
+                          <td className="px-2 py-1 whitespace-nowrap">{s.fecha}</td>
+                          <td className="px-2 py-1 whitespace-nowrap">{s.asesor || "—"}</td>
+                          <td className="px-2 py-1 whitespace-nowrap">{s.cliente || "—"}</td>
+                          <td className="px-2 py-1 whitespace-nowrap">{s.modelo || "—"}</td>
+                          <td className="px-2 py-1 whitespace-nowrap font-mono">{money(s.valor)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {importSalesPreview.nuevas.length > 50 && (
+                    <div className="text-[10px] px-2 py-1.5" style={{ color: "#8A8F98" }}>
+                      Mostrando las primeras 50 de {importSalesPreview.nuevas.length} filas.
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleSalesImportConfirm}
+                  disabled={importingSales || importSalesPreview.nuevas.length === 0}
+                  className="rounded-md px-4 py-2 text-xs font-semibold uppercase tracking-[0.08em] flex items-center gap-2 disabled:opacity-50"
+                  style={{ background: "#E4002B", color: "#F2F1EC", fontFamily: "'Oswald',sans-serif" }}
+                >
+                  {importingSales && <Loader2 size={13} className="animate-spin" />}
+                  Confirmar importación
+                </button>
+                <button
+                  onClick={() => setImportSalesPreview(null)}
+                  disabled={importingSales}
+                  className="rounded-md px-4 py-2 text-xs font-semibold uppercase tracking-[0.08em]"
+                  style={{ color: "#8A8F98", border: "1px solid #2A2E35" }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
         <div className="rounded-lg p-4 sm:p-5" style={{ background: "#1E2126", border: "1px solid #E4002B" }}>
           <div className="flex items-center justify-between mb-4">
             <div className="font-semibold uppercase text-xs tracking-[0.14em]" style={{ color: "#E4002B", fontFamily: "'Oswald',sans-serif" }}>
